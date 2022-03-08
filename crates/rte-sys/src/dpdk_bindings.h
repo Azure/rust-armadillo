@@ -1,0 +1,68 @@
+/// known issues:
+// 1. https://github.com/rust-lang/rust/issues/54341
+
+#include <rte_acl.h>
+#include <rte_eal.h>
+#include <rte_errno.h>
+#include <rte_ethdev.h>
+#include <rte_lcore.h>
+#include <rte_malloc.h>
+#include <rte_timer.h>
+
+// Used for testing to initialize lcore ids for all threads while runing in parallel
+void _rte_set_mock_lcore(uint32_t lcore_id);
+/* workaround to an anonymous enum defined by DPDK  */
+typedef enum
+{
+    DDOS_RTE_ACL_FIELD_TYPE_MASK = RTE_ACL_FIELD_TYPE_MASK,
+    DDOS_RTE_ACL_FIELD_TYPE_RANGE = RTE_ACL_FIELD_TYPE_RANGE,
+    DDOS_RTE_ACL_FIELD_TYPE_BITMASK = RTE_ACL_FIELD_TYPE_BITMASK
+} DDOS_RTE_ACL_FIELD_TYPE;
+
+// bindgen can't generate bindings for static functions defined in C
+// header files. these shims are necessary to expose them to FFI.
+
+unsigned _rte_lcore_id(void);
+
+/**
+ * Error number value, stored per-thread, which can be queried after
+ * calls to certain functions to determine why those functions failed.
+ */
+int _rte_errno(void);
+
+/**
+ * Allocate a new mbuf from a mempool.
+ */
+char *_rte_pktmbuf_prepend(struct rte_mbuf *m, uint16_t len);
+
+/**
+ * Allocate a new mbuf from a mempool.
+ */
+struct rte_mbuf *_rte_pktmbuf_alloc(struct rte_mempool *mp);
+
+/**
+ * Free a packet mbuf back into its original mempool.
+ */
+void _rte_pktmbuf_free(struct rte_mbuf *m);
+
+/**
+ * Put several objects back in the mempool.
+ */
+void _rte_mempool_put_bulk(struct rte_mempool *mp, void *const *obj_table, unsigned int n);
+
+/**
+ * Retrieve a burst of input packets from a receive queue of an Ethernet
+ * device. The retrieved packets are stored in *rte_mbuf* structures whose
+ * pointers are supplied in the *rx_pkts* array.
+ */
+uint16_t _rte_eth_rx_burst(uint16_t port_id, uint16_t queue_id, struct rte_mbuf **rx_pkts, const uint16_t nb_pkts);
+
+/**
+ * Send a burst of output packets on a transmit queue of an Ethernet device.
+ */
+uint16_t _rte_eth_tx_burst(uint16_t port_id, uint16_t queue_id, struct rte_mbuf **tx_pkts, uint16_t nb_pkts);
+
+/**
+ * Return the number of TSC cycles since boot.
+ */
+uint64_t _rte_get_tsc_cycles(void);

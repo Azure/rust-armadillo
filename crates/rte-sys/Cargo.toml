@@ -1,0 +1,16 @@
+[package]
+name = "rte-sys"
+version = "20.11.0"
+description = "FFI bindings to DPDK"
+links = "dpdk"
+build = "build.rs"
+edition = '2021'
+
+[lib]
+name = "rte_sys"
+
+[build-dependencies]
+bindgen = "0.59"
+cc = "1.0"
+
+rte-build = { path = "../rte-build" }
