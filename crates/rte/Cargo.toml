@@ -1,0 +1,17 @@
+[package]
+name = "rte"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bitflags = "1.2"
+libc = "0.2"
+
+ffi = { package = "rte-sys", path= "../rte-sys" }
+mac-addr = { path = "../mac-addr" }
+rte-error = { path = "../rte-error" }
+
+[dev-dependencies]
+once_cell = "1.10"
+
+rte-test-utils = { path = "../rte-test-utils" }

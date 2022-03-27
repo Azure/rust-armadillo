@@ -1,0 +1,8 @@
+[package]
+name = "rte-test-utils"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+ffi = { package = "rte-sys", path = "../rte-sys" }
+rte-eal = { path = "../rte-eal" }

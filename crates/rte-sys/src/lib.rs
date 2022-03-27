@@ -81,6 +81,4 @@
 #![allow(non_snake_case)]
 #![cfg(target_os = "linux")]
 
-pub mod dpdk_bindings {
-    include!(concat!(env!("OUT_DIR"), "/dpdk_bindings.rs"));
-}
+include!(concat!(env!("OUT_DIR"), "/dpdk_bindings.rs"));
