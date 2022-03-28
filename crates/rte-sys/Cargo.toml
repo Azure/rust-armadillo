@@ -4,10 +4,7 @@ version = "20.11.0"
 description = "FFI bindings to DPDK"
 links = "dpdk"
 build = "build.rs"
-edition = '2021'
-
-[lib]
-name = "rte_sys"
+edition = "2021"
 
 [build-dependencies]
 bindgen = "0.59"

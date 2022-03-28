@@ -6,12 +6,19 @@ edition = "2021"
 [dependencies]
 bitflags = "1.2"
 libc = "0.2"
+once_cell = { version = "1.10", optional = true }
 
 ffi = { package = "rte-sys", path= "../rte-sys" }
 mac-addr = { path = "../mac-addr" }
+rte-eal = { path = "../rte-eal", optional = true }
 rte-error = { path = "../rte-error" }
+rte-test-macros = { path = "../rte-test-macros", optional = true }
 
 [dev-dependencies]
 once_cell = "1.10"
 
-rte-test-utils = { path = "../rte-test-utils" }
+rte-eal = { path = "../rte-eal" }
+rte-test-macros = { path = "../rte-test-macros" }
+
+[features]
+test-utils = ["rte-test-macros", "rte-eal", "once_cell"]

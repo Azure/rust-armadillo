@@ -1,3 +1,6 @@
+#[cfg(test)]
+extern crate self as rte;
+
 #[macro_use]
 pub mod utils;
 pub mod acl;
@@ -8,6 +11,9 @@ pub mod lcore;
 pub mod mbuf;
 pub mod mempool;
 pub mod timer;
+
+#[cfg(any(test, feature = "test-utils"))]
+pub mod test_utils;
 
 type Result<T, E = rte_error::Error> = std::result::Result<T, E>;
 

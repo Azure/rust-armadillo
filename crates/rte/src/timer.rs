@@ -148,8 +148,7 @@ pub fn subsystem_init() -> Result<()> {
 mod tests {
     use std::cell::RefCell;
 
-    use once_cell::sync::Lazy;
-    use rte_test_utils::{init_test_eal, mock_lcore};
+    use crate::test_utils::rte_test;
 
     use super::*;
 
@@ -172,19 +171,8 @@ mod tests {
         arg_mut.x = 7;
     }
 
-    static SETUP: Lazy<()> = Lazy::new(|| {
-        init_test_eal();
-        subsystem_init().expect("Failed to rte_timer_subsystem_init");
-    });
-
-    fn setup() {
-        let _ = *SETUP;
-        mock_lcore();
-    }
-
-    #[test]
+    #[rte_test(mock_lcore)]
     fn single_reset() {
-        setup();
         let arg = DummyArg { x: 5, y: 10, calls_count: RefCell::new(0) };
         let mut timer = Timer::new(dummy_callback, &arg);
         timer.reset(1).unwrap();
@@ -192,9 +180,8 @@ mod tests {
         assert_eq!(*arg.calls_count.borrow(), 1);
     }
 
-    #[test]
+    #[rte_test(mock_lcore)]
     fn single_reset_mut() {
-        setup();
         let mut arg = DummyArg { x: 5, y: 10, calls_count: RefCell::new(0) };
         let mut timer = Timer::new_mut(dummy_mut_callback, &mut arg);
         timer.reset(1).unwrap();
@@ -203,9 +190,8 @@ mod tests {
         assert_eq!(arg.x, 7);
     }
 
-    #[test]
+    #[rte_test(mock_lcore)]
     fn periodical() {
-        setup();
         let arg = DummyArg { x: 5, y: 10, calls_count: RefCell::new(0) };
         let mut timer = Timer::new(dummy_callback, &arg);
         timer.reset_periodical(1).unwrap();
@@ -215,9 +201,8 @@ mod tests {
         assert_eq!(*arg.calls_count.borrow(), 2);
     }
 
-    #[test]
+    #[rte_test(mock_lcore)]
     fn periodical_mut() {
-        setup();
         let mut arg = DummyArg { x: 5, y: 10, calls_count: RefCell::new(0) };
         let _timer = periodical_mut_timer(1, dummy_mut_callback, &mut arg);
         manage().unwrap();

@@ -50,7 +50,7 @@
 //! rte-build = { path = "rte-build" }
 //! ```
 //!
-//! ```no_run
+//! ```ignore
 //! // build.rs
 //! use std::env;
 //!
@@ -59,7 +59,7 @@
 //! }
 //! ```
 //!
-//! ```no_run
+//! ```ignore
 //! // main.rs
 //! include!(concat!(env!("OUT_DIR", "/whole_archive_hack.rs")));
 //!
