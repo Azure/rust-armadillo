@@ -12,9 +12,9 @@
 //!
 //! use argv::Args;
 //!
-//! let mut args = Args::from_args();
-//! let mut ptrs = args.to_ptrs();
-//! let mut argv = ptrs.to_argv();
+//! let mut args = Args::new(std::env::args());
+//! let mut ptrs = args.as_ptrs();
+//! let mut argv = ptrs.as_argv();
 //!
 //! unsafe {
 //!     let (argc, mut argv) = (argv.argc(), argv.argv());
@@ -37,25 +37,25 @@
 //!
 //! ```
 //! # use argv::Args;
-//! let mut args = Args::from_args();
-//! let mut ptrs = args.to_ptrs();
-//! let mut argv = ptrs.to_argv();
+//! let mut args = Args::new(std::env::args());
+//! let mut ptrs = args.as_ptrs();
+//! let mut argv = ptrs.as_argv();
 //! ```
 //!
 //! ```compile_fail
 //! # use argv::Args;
-//! # let mut args = Args::from_args();
-//! # let mut ptrs = args.to_ptrs();
-//! # let mut argv = ptrs.to_argv();
+//! # let mut args = Args::new(std::env::args());
+//! # let mut ptrs = args.as_ptrs();
+//! # let mut argv = ptrs.as_argv();
 //! drop(ptrs);
 //! unsafe { argv.argv(); } // Can't use argv because it is tied to ptrs' lifetime
 //! ```
 //!
 //! ```compile_fail
 //! # use argv::Args;
-//! # let mut args = Args::from_args();
-//! # let mut ptrs = args.to_ptrs();
-//! # let mut argv = ptrs.to_argv();
+//! # let mut args = Args::new(std::env::args());
+//! # let mut ptrs = args.as_ptrs();
+//! # let mut argv = ptrs.as_argv();
 //! drop(args);
 //! ptrs.to_argv(); // Can't use ptrs because it is tied to args' lifetime
 //! ```
