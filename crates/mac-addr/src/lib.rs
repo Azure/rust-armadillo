@@ -41,12 +41,7 @@ impl MacAddr {
 
     /// Returns the six eight-bit integers that make up this address.
     #[inline]
-    pub fn octets(&self) -> &[u8; ETHER_ADDR_LEN] {
-        &self.0
-    }
-
-    #[inline]
-    pub fn into_bytes(self) -> [u8; ETHER_ADDR_LEN] {
+    pub const fn octets(&self) -> [u8; ETHER_ADDR_LEN] {
         self.0
     }
 
@@ -107,7 +102,7 @@ mod tests {
     fn test_macaddr() {
         let addr = MacAddr::new(0x18, 0x2b, 0x3c, 0x4d, 0x5e, 0x6f);
 
-        assert_eq!(addr.octets(), &[0x18, 0x2b, 0x3c, 0x4d, 0x5e, 0x6f]);
+        assert_eq!(addr.octets(), [0x18, 0x2b, 0x3c, 0x4d, 0x5e, 0x6f]);
         assert_eq!(addr.to_string(), "18:2b:3c:4d:5e:6f");
 
         assert_eq!(addr, MacAddr::from([0x18, 0x2b, 0x3c, 0x4d, 0x5e, 0x6f]));
