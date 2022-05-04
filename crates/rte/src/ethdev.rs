@@ -452,6 +452,110 @@ bitflags! {
     }
 }
 
+bitflags! {
+    pub struct RxOffloadHashFunc: u32 {
+        const RX_OFFLOAD_VLAN_STRIP = ffi::DEV_RX_OFFLOAD_VLAN_STRIP;
+        const RX_OFFLOAD_IPV4_CKSUM = ffi::DEV_RX_OFFLOAD_IPV4_CKSUM;
+        const RX_OFFLOAD_UDP_CKSUM = ffi::DEV_RX_OFFLOAD_UDP_CKSUM;
+        const RX_OFFLOAD_TCP_CKSUM = ffi::DEV_RX_OFFLOAD_TCP_CKSUM;
+        const RX_OFFLOAD_TCP_LRO = ffi::DEV_RX_OFFLOAD_TCP_LRO;
+        const RX_OFFLOAD_QINQ_STRIP = ffi::DEV_RX_OFFLOAD_QINQ_STRIP;
+        const RX_OFFLOAD_OUTER_IPV4_CKS = ffi::DEV_RX_OFFLOAD_OUTER_IPV4_CKSUM;
+        const RX_OFFLOAD_MACSEC_STRIP = ffi::DEV_RX_OFFLOAD_MACSEC_STRIP;
+        const RX_OFFLOAD_HEADER_SPLIT = ffi::DEV_RX_OFFLOAD_HEADER_SPLIT;
+        const RX_OFFLOAD_VLAN_FILTER = ffi::DEV_RX_OFFLOAD_VLAN_FILTER;
+        const RX_OFFLOAD_VLAN_EXTEND = ffi::DEV_RX_OFFLOAD_VLAN_EXTEND;
+        const RX_OFFLOAD_JUMBO_FRAME = ffi::DEV_RX_OFFLOAD_JUMBO_FRAME;
+        const RX_OFFLOAD_SCATTER = ffi::DEV_RX_OFFLOAD_SCATTER;
+        const RX_OFFLOAD_TIMESTAMP = ffi::DEV_RX_OFFLOAD_TIMESTAMP;
+        const RX_OFFLOAD_SECURITY = ffi::DEV_RX_OFFLOAD_SECURITY;
+        const RX_OFFLOAD_KEEP_CRC = ffi::DEV_RX_OFFLOAD_KEEP_CRC;
+        const RX_OFFLOAD_SCTP_CKSUM = ffi::DEV_RX_OFFLOAD_SCTP_CKSUM;
+        const RX_OFFLOAD_OUTER_UDP_CKSU = ffi::DEV_RX_OFFLOAD_OUTER_UDP_CKSUM;
+        const RX_OFFLOAD_RSS_HASH = ffi::DEV_RX_OFFLOAD_RSS_HASH;
+    }
+}
+
+bitflags! {
+    pub struct TxOffloadsHashFunc: u32 {
+        const TX_OFFLOAD_VLAN_INSERT = ffi::DEV_TX_OFFLOAD_VLAN_INSERT;
+        const TX_OFFLOAD_IPV4_CKSUM = ffi::DEV_TX_OFFLOAD_IPV4_CKSUM;
+        const TX_OFFLOAD_UDP_CKSUM = ffi::DEV_TX_OFFLOAD_UDP_CKSUM;
+        const TX_OFFLOAD_TCP_CKSUM = ffi::DEV_TX_OFFLOAD_TCP_CKSUM;
+        const TX_OFFLOAD_SCTP_CKSUM = ffi::DEV_TX_OFFLOAD_SCTP_CKSUM;
+        const TX_OFFLOAD_TCP_TSO = ffi::DEV_TX_OFFLOAD_TCP_TSO;
+        const TX_OFFLOAD_UDP_TSO = ffi::DEV_TX_OFFLOAD_UDP_TSO;
+        const TX_OFFLOAD_OUTER_IPV4_CKSUM = ffi::DEV_TX_OFFLOAD_OUTER_IPV4_CKSUM;
+        const TX_OFFLOAD_QINQ_INSERT = ffi::DEV_TX_OFFLOAD_QINQ_INSERT;
+        const TX_OFFLOAD_VXLAN_TNL_TSO = ffi::DEV_TX_OFFLOAD_VXLAN_TNL_TSO;
+        const TX_OFFLOAD_GRE_TNL_TSO = ffi::DEV_TX_OFFLOAD_GRE_TNL_TSO;
+        const TX_OFFLOAD_IPIP_TNL_TSO = ffi::DEV_TX_OFFLOAD_IPIP_TNL_TSO;
+        const TX_OFFLOAD_GENEVE_TNL_TSO = ffi::DEV_TX_OFFLOAD_GENEVE_TNL_TSO;
+        const TX_OFFLOAD_MACSEC_INSERT = ffi::DEV_TX_OFFLOAD_MACSEC_INSERT;
+        const TX_OFFLOAD_MT_LOCKFREE = ffi::DEV_TX_OFFLOAD_MT_LOCKFREE;
+        const TX_OFFLOAD_MULTI_SEGS = ffi::DEV_TX_OFFLOAD_MULTI_SEGS;
+        const TX_OFFLOAD_MBUF_FAST_FREE = ffi::DEV_TX_OFFLOAD_MBUF_FAST_FREE;
+        const TX_OFFLOAD_SECURITY = ffi::DEV_TX_OFFLOAD_SECURITY;
+        const TX_OFFLOAD_UDP_TNL_TSO = ffi::DEV_TX_OFFLOAD_UDP_TNL_TSO;
+        const TX_OFFLOAD_IP_TNL_TSO = ffi::DEV_TX_OFFLOAD_IP_TNL_TSO;
+        const TX_OFFLOAD_OUTER_UDP_CKSUM = ffi::DEV_TX_OFFLOAD_OUTER_UDP_CKSUM;
+        const TX_OFFLOAD_SEND_ON_TIMESTAMP = ffi::DEV_TX_OFFLOAD_SEND_ON_TIMESTAMP;
+    }
+}
+
+bitflags! {
+    pub struct PktTxOffloadHashFunc: u64 {
+        const PKT_TX_OUTER_UDP_CKSUM = ffi::PKT_TX_OUTER_UDP_CKSUM;
+        const PKT_TX_UDP_SEG = ffi::PKT_TX_UDP_SEG;
+        const PKT_TX_SEC_OFFLOAD = ffi::PKT_TX_SEC_OFFLOAD;
+        const PKT_TX_MACSEC = ffi::PKT_TX_MACSEC;
+        const PKT_TX_TUNNEL_VXLAN = ffi::PKT_TX_TUNNEL_VXLAN;
+        const PKT_TX_TUNNEL_GRE = ffi::PKT_TX_TUNNEL_GRE;
+        const PKT_TX_TUNNEL_IPIP = ffi::PKT_TX_TUNNEL_IPIP;
+        const PKT_TX_TUNNEL_GENEVE = ffi::PKT_TX_TUNNEL_GENEVE;
+        const PKT_TX_TUNNEL_MPLSINUDP = ffi::PKT_TX_TUNNEL_MPLSINUDP;
+        const PKT_TX_TUNNEL_VXLAN_GPE = ffi::PKT_TX_TUNNEL_VXLAN_GPE;
+        const PKT_TX_TUNNEL_GTP = ffi::PKT_TX_TUNNEL_GTP;
+        const PKT_TX_TUNNEL_IP = ffi::PKT_TX_TUNNEL_IP;
+        const PKT_TX_TUNNEL_UDP = ffi::PKT_TX_TUNNEL_UDP;
+        const PKT_TX_TUNNEL_MASK = ffi::PKT_TX_TUNNEL_MASK;
+        const PKT_TX_QINQ = ffi::PKT_TX_QINQ;
+        const PKT_TX_QINQ_PKT = ffi::PKT_TX_QINQ_PKT;
+        const PKT_TX_TCP_SEG = ffi::PKT_TX_TCP_SEG;
+        const PKT_TX_IEEE1588_TMST = ffi::PKT_TX_IEEE1588_TMST;
+        const PKT_TX_TCP_CKSUM = ffi::PKT_TX_TCP_CKSUM;
+        const PKT_TX_SCTP_CKSUM = ffi::PKT_TX_SCTP_CKSUM;
+        const PKT_TX_UDP_CKSUM = ffi::PKT_TX_UDP_CKSUM;
+        const PKT_TX_L4_MASK = ffi::PKT_TX_L4_MASK;
+        const PKT_TX_IP_CKSUM = ffi::PKT_TX_IP_CKSUM;
+        const PKT_TX_IPV4 = ffi::PKT_TX_IPV4;
+        const PKT_TX_IPV6 = ffi::PKT_TX_IPV6;
+        const PKT_TX_VLAN = ffi::PKT_TX_VLAN;
+        const PKT_TX_VLAN_PKT = ffi::PKT_TX_VLAN_PKT;
+        const PKT_TX_OUTER_IP_CKSUM = ffi::PKT_TX_OUTER_IP_CKSUM;
+        const PKT_TX_OUTER_IPV4 = ffi::PKT_TX_OUTER_IPV4;
+        const PKT_TX_OUTER_IPV6 = ffi::PKT_TX_OUTER_IPV6;
+        const PKT_TX_OFFLOAD_MASK = ffi::PKT_TX_OFFLOAD_MASK;
+
+        // Flags to enable offloading of IPv4 header checksum calculation
+        const IPV4_HDR_CHECKSUM =
+            Self::PKT_TX_IP_CKSUM.bits |
+            Self::PKT_TX_IPV4.bits;
+
+        // TODO - offload TCP checksum calculation https://msazure.visualstudio.com/One/_workitems/edit/14335353
+        // Flags to enable offloading of TCP (over IPv4) and IPv4 header checksums calculations
+        const IPV4_HDR_TCP_CHECKSUMS =
+            Self::PKT_TX_IP_CKSUM.bits |
+            Self::PKT_TX_TCP_CKSUM.bits |
+            Self::PKT_TX_IPV4.bits;
+
+        // TODO - offload TCP checksum calculation https://msazure.visualstudio.com/One/_workitems/edit/14335353
+        // Flags to enable offloading of TCP (over IPv6) checksums calculation (there is no checksum in IPv6 headers)
+        const IPV6_TCP_CHECKSUMS =
+            Self::PKT_TX_TCP_CKSUM.bits |
+            Self::PKT_TX_IPV6.bits;
+    }
+}
 /**
  * A set of values to identify what method is to be used to transmit
  * packets using multi-TCs.
