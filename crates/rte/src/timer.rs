@@ -148,9 +148,8 @@ pub fn subsystem_init() -> Result<()> {
 mod tests {
     use std::cell::RefCell;
 
-    use crate::test_utils::rte_test;
-
     use super::*;
+    use crate::test_utils::rte_test;
 
     struct DummyArg {
         x: u64,

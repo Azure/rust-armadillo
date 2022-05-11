@@ -1,7 +1,9 @@
-use std::fmt;
-use std::ops::{Deref, DerefMut};
-use std::result;
-use std::str;
+use std::{
+    fmt,
+    ops::{Deref, DerefMut},
+    result, str,
+};
+
 use zerocopy::{AsBytes, FromBytes, Unaligned};
 
 #[derive(thiserror::Error, Debug, Clone, PartialEq, Eq)]

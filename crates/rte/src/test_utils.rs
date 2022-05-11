@@ -1,7 +1,6 @@
 use std::thread;
 
 use once_cell::sync::Lazy;
-
 pub use rte_test_macros::rte_test;
 
 pub fn init_test_eal() {
