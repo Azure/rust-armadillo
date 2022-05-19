@@ -5,8 +5,6 @@ use rte_error::ReturnValue as _;
 
 use crate::{lcore, Result};
 
-pub const MS_IN_SEC: u64 = 1000;
-
 enum TimerType {
     Single,
     Periodical,
