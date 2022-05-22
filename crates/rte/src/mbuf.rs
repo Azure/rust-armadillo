@@ -81,7 +81,7 @@ pub fn pool_create<S: AsRef<str>>(
     socket_id: i32,
 ) -> Result<mempool::MemoryPool> {
     let name = name.as_c_str();
-    let ops = "ring_mp_mc".as_c_str();
+    let ops = ffi::RTE_MBUF_DEFAULT_MEMPOOL_OPS;
 
     let ptr = unsafe {
         ffi::rte_pktmbuf_pool_create_by_ops(
@@ -91,7 +91,7 @@ pub fn pool_create<S: AsRef<str>>(
             priv_size,
             data_room_size,
             socket_id,
-            ops.as_ptr(),
+            ops as *const u8 as *const i8,
         )
     }
     .rte_ok()?;
