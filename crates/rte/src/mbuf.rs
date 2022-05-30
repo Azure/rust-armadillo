@@ -97,3 +97,69 @@ pub fn pool_create<S: AsRef<str>>(
     .rte_ok()?;
     Ok(mempool::MemoryPool::from(ptr.as_ptr()))
 }
+
+#[cfg(any(test, feature = "test-utils"))]
+pub mod test_utils {
+    use std::{ops::Deref, ptr};
+
+    use ffi::RTE_MBUF_DEFAULT_BUF_SIZE;
+    use uuid::Uuid;
+
+    use crate::{
+        lcore,
+        mbuf::{self, MBufPool as _},
+        mempool,
+        utils::AsRaw as _,
+    };
+
+    pub struct GeneratedMbufs {
+        mbufs: Vec<mbuf::RawMBufPtr>,
+        _mbuf_pool: mempool::MemoryPool,
+    }
+
+    impl Deref for GeneratedMbufs {
+        type Target = [mbuf::RawMBufPtr];
+
+        fn deref(&self) -> &Self::Target {
+            self.mbufs.deref()
+        }
+    }
+
+    pub fn pool_create_from_bufs<B: AsRef<[u8]>>(bufs: &[B]) -> GeneratedMbufs {
+        let mut memory_pool = {
+            let mut uid_str = Uuid::new_v4().to_string();
+            let id_len = uid_str.chars().count() - 10; // leave space for DPDK prefix
+            uid_str.drain(0..id_len);
+
+            mbuf::pool_create(
+                format!("{uid_str:?}"),
+                bufs.len().try_into().unwrap(),
+                0,
+                0,
+                RTE_MBUF_DEFAULT_BUF_SIZE as u16,
+                lcore::SOCKET_ID_ANY,
+            )
+            .expect("fail to initialize mbuf pool")
+        };
+
+        let mbufs = bufs
+            .iter()
+            .map(AsRef::<[u8]>::as_ref)
+            .map(|buf| {
+                let mut mbuf = memory_pool.alloc().unwrap();
+                let pkt_len: u16 = buf.len().try_into().unwrap();
+
+                let buf_ptr = mbuf.as_mut_ptr_offset(0);
+                assert!(pkt_len <= mbuf.buf_len - mbuf.data_off);
+                unsafe {
+                    ptr::copy(buf.as_ptr(), buf_ptr, buf.len());
+                }
+
+                mbuf.data_len = pkt_len;
+                mbuf.as_raw()
+            })
+            .collect::<Vec<_>>();
+
+        GeneratedMbufs { mbufs, _mbuf_pool: memory_pool }
+    }
+}

@@ -10,15 +10,16 @@ use zerocopy::{AsBytes, FromBytes, Unaligned};
 #[error("invalid MAC address syntax")]
 pub struct AddrParseError(());
 
-pub const ETHER_ADDR_LEN: usize = 6;
+pub const ETHER_ADDR_LEN: u8 = 6;
+type MacAddrBuf = [u8; ETHER_ADDR_LEN as usize];
 
 /// A 48-bit (6 byte) buffer containing the MAC address
 #[derive(Debug, FromBytes, AsBytes, Unaligned, Copy, Clone, Default, PartialEq, Eq, Hash)]
 #[repr(packed)]
-pub struct MacAddr([u8; ETHER_ADDR_LEN]);
+pub struct MacAddr(MacAddrBuf);
 
 impl Deref for MacAddr {
-    type Target = [u8; ETHER_ADDR_LEN];
+    type Target = MacAddrBuf;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -43,7 +44,7 @@ impl MacAddr {
 
     /// Returns the six eight-bit integers that make up this address.
     #[inline]
-    pub const fn octets(&self) -> [u8; ETHER_ADDR_LEN] {
+    pub const fn octets(&self) -> MacAddrBuf {
         self.0
     }
 
@@ -74,8 +75,8 @@ impl fmt::Display for MacAddr {
     }
 }
 
-impl From<[u8; 6]> for MacAddr {
-    fn from(addr: [u8; 6]) -> MacAddr {
+impl From<MacAddrBuf> for MacAddr {
+    fn from(addr: MacAddrBuf) -> MacAddr {
         MacAddr(addr)
     }
 }
