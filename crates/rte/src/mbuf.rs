@@ -38,6 +38,16 @@ impl MBuf {
     }
 
     #[inline]
+    pub fn len(&self) -> usize {
+        self.as_slice().len()
+    }
+
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.as_slice().is_empty()
+    }
+
+    #[inline]
     // TODO: temporary hack, fix mbuf lifetimes https://msazure.visualstudio.com/One/_workitems/edit/10357334
     pub fn as_mut_slice(&mut self) -> &'static mut [u8] {
         unsafe { slice::from_raw_parts_mut(self.mtod().as_ptr(), self.data_len as usize) }
