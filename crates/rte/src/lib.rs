@@ -5,7 +5,6 @@ extern crate self as rte;
 pub mod utils;
 pub mod acl;
 pub mod ethdev;
-pub mod ether;
 pub mod launch;
 pub mod lcore;
 pub mod mbuf;

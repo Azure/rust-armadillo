@@ -5,7 +5,7 @@ use ffi::RTE_MAX_ETHPORTS;
 use mac_addr::MacAddr;
 use rte_error::ReturnValue as _;
 
-use crate::{ether, lcore::SocketId, mbuf, mempool, utils::AsRaw, Result};
+use crate::{lcore::SocketId, mbuf, mempool, utils::AsRaw, Result};
 
 pub type PortId = u16;
 pub type QueueId = u16;
@@ -43,7 +43,7 @@ pub trait EthDevice {
     fn mac_addr(&self) -> Result<MacAddr>;
 
     /// Set the default MAC address.
-    fn set_mac_addr(&self, addr: &[u8; ether::ETHER_ADDR_LEN]) -> Result<&Self>;
+    fn set_mac_addr(&self, addr: MacAddr) -> Result<&Self>;
 
     /// Return the NUMA socket to which an Ethernet device is connected
     fn socket_id(&self) -> SocketId;
@@ -207,7 +207,7 @@ impl EthDevice for PortId {
         Ok(MacAddr::from(addr.addr_bytes))
     }
 
-    fn set_mac_addr(&self, addr: &[u8; ether::ETHER_ADDR_LEN]) -> Result<&Self> {
+    fn set_mac_addr(&self, addr: MacAddr) -> Result<&Self> {
         unsafe { ffi::rte_eth_dev_default_mac_addr_set(*self, addr.as_ptr() as *mut _) }.rte_ok()?;
         Ok(self)
     }
