@@ -1,4 +1,4 @@
-use std::{ffi::CStr, mem, ops::Range, ptr};
+use std::{ops::Range, ptr};
 
 use bitflags::bitflags;
 use ffi::RTE_MAX_ETHPORTS;
@@ -386,19 +386,7 @@ impl EthDevice for PortId {
     }
 }
 
-pub trait EthDeviceInfo {
-    /// Device Driver name.
-    fn driver_name(&self) -> &str;
-}
-
 pub type RawEthDeviceInfo = ffi::rte_eth_dev_info;
-
-impl EthDeviceInfo for RawEthDeviceInfo {
-    #[inline]
-    fn driver_name(&self) -> &str {
-        unsafe { CStr::from_ptr(self.driver_name).to_str().unwrap() }
-    }
-}
 
 pub trait EthDeviceStats {}
 
@@ -567,6 +555,7 @@ bitflags! {
     /// in rte_eth_ctrl.h. Different NIC hardwares may support different RSS offload
     /// types. The supported flow types or RSS offload types can be queried by
     /// rte_eth_dev_info_get().
+    #[derive(Default)]
     pub struct RssHashFunc: u64 {
         const ETH_RSS_IPV4               = 1 << ffi::RTE_ETH_FLOW_IPV4;
         const ETH_RSS_FRAG_IPV4          = 1 << ffi::RTE_ETH_FLOW_FRAG_IPV4;
@@ -629,16 +618,10 @@ bitflags! {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Default, Clone, Copy)]
 pub struct EthRssConf {
     pub key: Option<[u8; 40]>,
     pub hash: RssHashFunc,
-}
-
-impl Default for EthRssConf {
-    fn default() -> Self {
-        unsafe { mem::zeroed() }
-    }
 }
 
 #[derive(Default, Clone, Copy)]
