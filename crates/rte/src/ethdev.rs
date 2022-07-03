@@ -10,7 +10,7 @@ use ffi::RTE_MAX_ETHPORTS;
 use mac_addr::MacAddr;
 use rte_error::ReturnValue as _;
 
-use crate::{lcore::SocketId, mbuf::MBuf, mempool, utils::AsRaw, Result};
+use crate::{lcore::SocketId, mbuf::MBuf, mempool, Result};
 
 pub type PortId = u16;
 pub type QueueId = u16;
@@ -246,7 +246,7 @@ impl EthDevice for PortId {
                 nb_rx_desc,
                 self.socket_id() as u32,
                 rx_conf.as_ref().map(|conf| conf as *const _).unwrap_or(ptr::null()),
-                mb_pool.as_raw(),
+                mb_pool.0.as_ptr(),
             )
         }
         .rte_ok()?;

@@ -53,3 +53,11 @@ uint64_t _rte_get_tsc_cycles(void)
 {
     return rte_get_tsc_cycles();
 }
+
+uint16_t _rte_pktmbuf_priv_size(struct rte_mempool *mp) {
+    return rte_pktmbuf_priv_size(mp);
+}
+
+uint16_t _rte_pktmbuf_data_room_size(struct rte_mempool *mp) {
+    return rte_pktmbuf_data_room_size(mp);
+}

@@ -9,12 +9,7 @@ use std::{
 use ffi::_bindgen_ty_16::{RTE_MBUF_L2_LEN_BITS, RTE_MBUF_L3_LEN_BITS};
 use rte_error::ReturnValue as _;
 
-use crate::{
-    ethdev::PktTxOffloadHashFunc,
-    mempool,
-    utils::{AsCString, AsRaw},
-    Result,
-};
+use crate::ethdev::PktTxOffloadHashFunc;
 
 /// This struct is a Rust-y wrapper around a pointer to DPDK's [`rte_mbuf`](ffi::rte_mbuf) struct.
 ///
@@ -43,7 +38,7 @@ use crate::{
 /// # Implementation notes
 /// - This wrapper completely ignores all but the first segment of an mbuf.
 #[repr(transparent)]
-pub struct MBuf(NonNull<ffi::rte_mbuf>);
+pub struct MBuf(pub(crate) NonNull<ffi::rte_mbuf>);
 
 impl MBuf {
     /// Returns the raw pointer to the `rte_mbuf` struct, pointed to by this `MBuf`.
@@ -211,44 +206,6 @@ impl Clone for MBuf {
     }
 }
 
-pub trait MBufPool {
-    /// Allocate a new mbuf from a mempool.
-    fn alloc(&mut self) -> Result<MBuf>;
-}
-
-impl MBufPool for mempool::MemoryPool {
-    fn alloc(&mut self) -> Result<MBuf> {
-        let ptr = unsafe { ffi::_rte_pktmbuf_alloc(self.as_raw()) }.rte_ok()?;
-        Ok(MBuf(ptr))
-    }
-}
-
-pub fn pool_create<S: AsRef<str>>(
-    name: S,
-    n: u32,
-    cache_size: u32,
-    priv_size: u16,
-    data_room_size: u16,
-    socket_id: i32,
-) -> Result<mempool::MemoryPool> {
-    let name = name.as_c_str();
-    let ops = ffi::RTE_MBUF_DEFAULT_MEMPOOL_OPS;
-
-    let ptr = unsafe {
-        ffi::rte_pktmbuf_pool_create_by_ops(
-            name.as_ptr(),
-            n,
-            cache_size,
-            priv_size,
-            data_room_size,
-            socket_id,
-            ops as *const u8 as *const i8,
-        )
-    }
-    .rte_ok()?;
-    Ok(mempool::MemoryPool::from(ptr.as_ptr()))
-}
-
 #[cfg(any(test, feature = "test-utils"))]
 pub mod test_utils {
     use std::ops::{Deref, DerefMut};
@@ -259,8 +216,7 @@ pub mod test_utils {
     use super::MBuf;
     use crate::{
         lcore,
-        mbuf::{self, MBufPool as _},
-        mempool,
+        mempool::{self, MemoryPool},
     };
 
     pub struct GeneratedMbufs {
@@ -283,7 +239,7 @@ pub mod test_utils {
     }
 
     pub fn pool_create_from_bufs<B: AsRef<[u8]>>(bufs: &[B]) -> GeneratedMbufs {
-        let mut memory_pool = {
+        let memory_pool = {
             let mut uid_str = Uuid::new_v4().to_string();
             let id_len = uid_str.chars().count() - 10; // leave space for DPDK prefix
             uid_str.drain(0..id_len);
@@ -295,7 +251,7 @@ pub mod test_utils {
                 false => 0x8020,
             };
 
-            mbuf::pool_create(
+            MemoryPool::new(
                 format!("{uid_str:?}"),
                 pool_size,
                 0,
@@ -309,7 +265,7 @@ pub mod test_utils {
         let mbufs = bufs
             .iter()
             .map(|buf| {
-                let mut mbuf = memory_pool.alloc().unwrap();
+                let mut mbuf = unsafe { memory_pool.alloc() }.unwrap();
 
                 mbuf.extend_from_slice(buf.as_ref());
                 mbuf

@@ -66,3 +66,13 @@ uint16_t _rte_eth_tx_burst(uint16_t port_id, uint16_t queue_id, struct rte_mbuf 
  * Return the number of TSC cycles since boot.
  */
 uint64_t _rte_get_tsc_cycles(void);
+
+/**
+ * Get the application private size of mbufs stored in a pktmbuf_pool.
+ */
+uint16_t _rte_pktmbuf_priv_size(struct rte_mempool *mp);
+
+/**
+ * Get the data room size of mbufs stored in a pktmbuf_pool.
+ */
+uint16_t _rte_pktmbuf_data_room_size(struct rte_mempool *mp);
