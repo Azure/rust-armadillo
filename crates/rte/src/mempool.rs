@@ -8,7 +8,7 @@ use std::{
 
 use rte_error::ReturnValue as _;
 
-use crate::{mbuf::MBuf, Result};
+use crate::Result;
 
 #[repr(transparent)]
 pub struct MemoryPool(pub(crate) NonNull<ffi::rte_mempool>);
@@ -50,16 +50,6 @@ impl MemoryPool {
         }
         .rte_ok()
         .map(Self)
-    }
-
-    /// Allocates a new [`MBuf`] from this memory pool.
-    ///
-    /// # Safety
-    /// The allocated `MBuf` is not tied this `MemoryPool`'s lifetime,
-    /// so it is up to the caller to ensure it is not used after the memory pool has been freed (i.e. dropped).
-    #[inline]
-    pub unsafe fn alloc(&self) -> Result<MBuf> {
-        ffi::_rte_pktmbuf_alloc(self.0.as_ptr()).rte_ok().map(MBuf)
     }
 
     #[inline]

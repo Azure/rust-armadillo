@@ -22,7 +22,7 @@ fn bind() {
         .opaque_type(r"rte_arp_ipv4|rte_arp_hdr")
         .allowlist_type(r"(rte|eth|DDOS)_.*")
         .allowlist_function(r"(_rte|rte|eth)_.*")
-        .allowlist_var(r"(RTE|DEV|ETH|MEMPOOL|PKT|LCORE|rte)_.*")
+        .allowlist_var(r"(RTE|EXT|DEV|ETH|MEMPOOL|PKT|LCORE|rte)_.*")
         .derive_copy(true)
         .derive_debug(true)
         .derive_default(true)

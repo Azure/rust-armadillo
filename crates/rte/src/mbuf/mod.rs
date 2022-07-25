@@ -1,5 +1,8 @@
+mod allocator;
+
 use std::{
     fmt,
+    marker::PhantomData,
     mem::{self, MaybeUninit},
     ops::{Deref, DerefMut},
     ptr::NonNull,
@@ -7,9 +10,11 @@ use std::{
 };
 
 use ffi::_bindgen_ty_16::{RTE_MBUF_L2_LEN_BITS, RTE_MBUF_L3_LEN_BITS};
-use rte_error::ReturnValue as _;
 
-use crate::ethdev::PktTxOffloadHashFunc;
+pub use self::allocator::Allocator;
+#[cfg(any(test, feature = "test-utils"))]
+pub use self::allocator::GlobalAllocator;
+use crate::{ethdev::PktTxOffloadHashFunc, mempool::MemoryPool};
 
 /// This struct is a Rust-y wrapper around a pointer to DPDK's [`rte_mbuf`](ffi::rte_mbuf) struct.
 ///
@@ -32,50 +37,109 @@ use crate::ethdev::PktTxOffloadHashFunc;
 /// assert_not_impl_any!(MBuf: Send, Sync);
 /// ```
 ///
+/// # Allocators
+/// `MBuf` is generic over a type implementing the [`Allocator`] trait.
+///
+/// The default allocator is [`MemoryPool`], which uses RTE's memory pool to allocate and manage mbufs.
+#[cfg_attr(
+    any(test, feature = "test-utils"),
+    doc = "For testing, the [`GlobalAllocator`] can be used creating mbufs without relying on the EAL (see also: [`alloc_mbufs`])."
+)]
+///
 /// # See also
 /// - The DPDK documentation on the [Mbuf Library](https://doc.dpdk.org/guides-21.08/prog_guide/mbuf_lib.html).
 ///
 /// # Implementation notes
 /// - This wrapper completely ignores all but the first segment of an mbuf.
 #[repr(transparent)]
-pub struct MBuf(pub(crate) NonNull<ffi::rte_mbuf>);
+pub struct MBuf<A = MemoryPool>
+where
+    A: Allocator,
+{
+    ptr: NonNull<ffi::rte_mbuf>,
+    _marker: PhantomData<A>,
+}
 
-impl MBuf {
+impl<A> MBuf<A>
+where
+    A: Allocator + Default,
+{
+    /// Allocate an empty mbuf with a default [allocator](Allocator).
+    #[inline]
+    pub fn new() -> Self {
+        Self::new_with_provider(&mut A::default())
+    }
+
+    /// Allocate an mbuf with a default [allocator](Allocator).
+    #[inline]
+    pub fn new_with_data<T: AsRef<[u8]>>(data: T) -> Self {
+        Self::new_with_provider_and_data(&mut A::default(), data)
+    }
+}
+
+impl<A> MBuf<A>
+where
+    A: Allocator,
+{
+    /// Allocate an empty mbuf with the given [allocator](Allocator).
+    #[track_caller]
+    #[inline]
+    pub fn new_with_provider(provider: &mut A) -> Self {
+        let ptr = provider.alloc().expect("Could not allocate mbuf");
+        Self { ptr, _marker: Default::default() }
+    }
+
+    /// Allocate an mbuf with the given [allocator](Allocator).
+    #[inline]
+    pub fn new_with_provider_and_data<T: AsRef<[u8]>>(provider: &mut A, data: T) -> Self {
+        let mut mbuf = Self::new_with_provider(provider);
+        mbuf.extend_from_slice(data.as_ref());
+        mbuf
+    }
+}
+
+impl<A> MBuf<A>
+where
+    A: Allocator,
+{
     /// Returns the raw pointer to the `rte_mbuf` struct, pointed to by this `MBuf`.
     ///
     /// # Safety
     /// It is up to the caller to make sure to not use the raw pointer in a way that breaks the safety invariants the `MBuf` struct relies on.
     #[inline]
     pub unsafe fn as_raw(&self) -> *mut ffi::rte_mbuf {
-        self.0.as_ptr()
+        self.ptr.as_ptr()
     }
 
     /* Helper functions for Deref and DerefMut impls. */
 
     fn data_ptr(&self) -> *mut u8 {
         unsafe {
-            let ffi::rte_mbuf { buf_addr, data_off, .. } = *self.0.as_ref();
+            let ffi::rte_mbuf { buf_addr, data_off, .. } = *self.ptr.as_ref();
             buf_addr.add(data_off.into()) as *mut _
         }
     }
 
     fn data_len(&self) -> usize {
-        unsafe { self.0.as_ref() }.data_len.into()
+        unsafe { self.ptr.as_ref() }.data_len.into()
     }
 }
 
 /// These method are equivilent to their [`Vec`] counterparts.
-impl MBuf {
+impl<A> MBuf<A>
+where
+    A: Allocator,
+{
     fn capacity(&self) -> usize {
         unsafe {
-            let ffi::rte_mbuf { data_off, buf_len, .. } = *self.0.as_ref();
+            let ffi::rte_mbuf { data_off, buf_len, .. } = *self.ptr.as_ref();
             buf_len.checked_sub(data_off).unwrap_unchecked().into()
         }
     }
 
     fn spare_capacity_mut(&mut self) -> &mut [MaybeUninit<u8>] {
         unsafe {
-            let ffi::rte_mbuf { buf_addr, data_off, data_len, buf_len, .. } = *self.0.as_ref();
+            let ffi::rte_mbuf { buf_addr, data_off, data_len, buf_len, .. } = *self.ptr.as_ref();
             let spare_cap = buf_addr.add(data_off.into()).add(data_len.into());
             let buf_end = spare_cap.add(buf_len.into());
             slice::from_raw_parts_mut(spare_cap as _, spare_cap.offset_from(buf_end) as usize)
@@ -84,7 +148,7 @@ impl MBuf {
 
     unsafe fn set_len(&mut self, len: usize) {
         debug_assert!(len <= self.capacity());
-        let mbuf = self.0.as_ptr();
+        let mbuf = self.ptr.as_ptr();
         (*mbuf).data_len = len as u16;
         (*mbuf).pkt_len = len as u32;
     }
@@ -118,13 +182,16 @@ impl MBuf {
     }
 }
 
-impl MBuf {
+impl<A> MBuf<A>
+where
+    A: Allocator,
+{
     /// Sets the [`l2_len`](https://doc.dpdk.org/api-2.2/structrte__mbuf.html#aa25a7c259438b9eba28bcedc33846620) field.
     #[inline]
     pub fn set_l2_len(&mut self, len: u64) {
         assert!(len < 1 << RTE_MBUF_L2_LEN_BITS);
         unsafe {
-            let mbuf = self.0.as_mut();
+            let mbuf = self.ptr.as_mut();
             mbuf.__bindgen_anon_3.__bindgen_anon_1.set_l2_len(len);
         }
     }
@@ -134,7 +201,7 @@ impl MBuf {
     pub fn set_l3_len(&mut self, len: u64) {
         assert!(len < 1 << RTE_MBUF_L3_LEN_BITS);
         unsafe {
-            let mbuf = self.0.as_mut();
+            let mbuf = self.ptr.as_mut();
             mbuf.__bindgen_anon_3.__bindgen_anon_1.set_l3_len(len);
         }
     }
@@ -145,22 +212,28 @@ impl MBuf {
     #[inline]
     pub fn enable_ol_flags(&mut self, flags: PktTxOffloadHashFunc) {
         unsafe {
-            let mbuf = self.0.as_mut();
+            let mbuf = self.ptr.as_mut();
             mbuf.ol_flags |= flags.bits();
         }
     }
 }
 
-impl Drop for MBuf {
+impl<A> Drop for MBuf<A>
+where
+    A: Allocator,
+{
     #[inline]
     fn drop(&mut self) {
         unsafe {
-            ffi::_rte_pktmbuf_free(self.as_raw());
+            A::free(self.ptr);
         }
     }
 }
 
-impl Deref for MBuf {
+impl<A> Deref for MBuf<A>
+where
+    A: Allocator,
+{
     type Target = [u8];
 
     #[inline]
@@ -169,109 +242,62 @@ impl Deref for MBuf {
     }
 }
 
-impl DerefMut for MBuf {
+impl<A> DerefMut for MBuf<A>
+where
+    A: Allocator,
+{
     #[inline]
     fn deref_mut(&mut self) -> &mut Self::Target {
         unsafe { slice::from_raw_parts_mut(self.data_ptr(), self.data_len()) }
     }
 }
 
-impl fmt::Debug for MBuf {
+impl<A> fmt::Debug for MBuf<A>
+where
+    A: Allocator,
+{
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         <[u8] as fmt::Debug>::fmt(self, f)
     }
 }
 
-/// Clones this `MBuf` using [`rte_pktmbuf_copy`](ffi::rte_pktmbuf_copy).
-///
-/// Notice that this creates a "deep" clone, including allocation a new data buffer and copying this buffer's contents over.
-///
-/// See also: <http://doc.dpdk.org/api-21.08/rte__mbuf_8h.html#a04f6ba3f0f9afe72e21e3a3f8908e6ae>
-///
-/// # Implementation notes
-/// Originally, the `Clone` implementation used [`rte_pktmbuf_clone`](http://doc.dpdk.org/api-21.08/rte__mbuf_8h.html#a5f1a5320fb96ff8c1a44be0aaec93856) to create
-/// a shallow clone (i.e. one where the original and the clone share the same underlying data buffer).
-///
-/// While a shallow clone is cheaper, it allows violating Rust borrow checker rules, by allowing safe code to create non-mutually-exclusive references to the same memory buffer.
-impl Clone for MBuf {
+impl<A> Default for MBuf<A>
+where
+    A: Allocator + Default,
+{
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<A> Clone for MBuf<A>
+where
+    A: Allocator,
+{
     #[track_caller]
     #[inline]
     fn clone(&self) -> Self {
-        unsafe {
-            let mbuf = self.0.as_ptr();
-            let len = self.len() as u32;
-            let mempool = (*mbuf).pool;
-            ffi::rte_pktmbuf_copy(mbuf, mempool, 0, len).rte_ok().map(Self).expect("Failed to allocate mbuf clone")
-        }
+        let ptr = unsafe { A::clone(self.ptr) }.expect("Failed to allocate mbuf clone");
+        Self { ptr, _marker: Default::default() }
     }
 }
 
 #[cfg(any(test, feature = "test-utils"))]
-pub mod test_utils {
-    use std::ops::{Deref, DerefMut};
-
-    use ffi::RTE_MBUF_DEFAULT_BUF_SIZE;
-    use uuid::Uuid;
-
-    use super::MBuf;
-    use crate::{
-        lcore,
-        mempool::{self, MemoryPool},
-    };
-
-    pub struct GeneratedMbufs {
-        mbufs: Vec<MBuf>,
-        _mbuf_pool: mempool::MemoryPool,
-    }
-
-    impl Deref for GeneratedMbufs {
-        type Target = [MBuf];
-
-        fn deref(&self) -> &Self::Target {
-            &self.mbufs
-        }
-    }
-
-    impl DerefMut for GeneratedMbufs {
-        fn deref_mut(&mut self) -> &mut Self::Target {
-            &mut self.mbufs
-        }
-    }
-
-    pub fn pool_create_from_bufs<B: AsRef<[u8]>>(bufs: &[B]) -> GeneratedMbufs {
-        let memory_pool = {
-            let mut uid_str = Uuid::new_v4().to_string();
-            let id_len = uid_str.chars().count() - 10; // leave space for DPDK prefix
-            uid_str.drain(0..id_len);
-
-            // hack-y way of making sure benchmarks have large-enough mempools,
-            // but that unit tests have ones that are not too expensive to allocate
-            let pool_size = match cfg!(debug_assertions) {
-                true => 0x800,
-                false => 0x8020,
-            };
-
-            MemoryPool::new(
-                format!("{uid_str:?}"),
-                pool_size,
-                0,
-                0,
-                RTE_MBUF_DEFAULT_BUF_SIZE as u16,
-                lcore::SOCKET_ID_ANY,
-            )
-            .expect("fail to initialize mbuf pool")
-        };
-
-        let mbufs = bufs
-            .iter()
-            .map(|buf| {
-                let mut mbuf = unsafe { memory_pool.alloc() }.unwrap();
-
-                mbuf.extend_from_slice(buf.as_ref());
-                mbuf
-            })
-            .collect();
-
-        GeneratedMbufs { mbufs, _mbuf_pool: memory_pool }
-    }
+/// Small helper for allocating and collecting an [`ArrayVec<MBuf>`](arrayvec::ArrayVec) from an iterator over byte slices,
+/// using a [`GlobalAllocator`] as the mbuf allocator.
+///
+/// # Example
+/// ```rust
+/// # use arrayvec::ArrayVec;
+/// # use rte::mbuf::{alloc_mbufs, MBuf};
+/// #
+/// let packets = [b"\x00\x01", b"\x02\x03"];
+/// let mbufs: ArrayVec<MBuf<_>, 2> = alloc_mbufs(packets);
+/// assert_eq!(&mbufs[0][..], b"\x00\x01");
+/// assert_eq!(&mbufs[1][..], b"\x02\x03");
+/// ```
+pub fn alloc_mbufs<const CAP: usize, B: AsRef<[u8]>, I: IntoIterator<Item = B>>(
+    iter: I,
+) -> arrayvec::ArrayVec<MBuf<GlobalAllocator>, CAP> {
+    iter.into_iter().map(MBuf::<GlobalAllocator>::new_with_data).collect()
 }
