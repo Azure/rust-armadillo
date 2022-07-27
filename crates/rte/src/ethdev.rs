@@ -420,11 +420,7 @@ impl EthDevice for PortId {
 
 pub type RawEthDeviceInfo = ffi::rte_eth_dev_info;
 
-pub trait EthDeviceStats {}
-
 pub type RawEthDeviceStats = ffi::rte_eth_stats;
-
-impl EthDeviceStats for RawEthDeviceStats {}
 
 bitflags! {
     /// Definitions used for VMDQ pool rx mode setting
