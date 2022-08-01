@@ -9,7 +9,7 @@ use std::{
     slice,
 };
 
-use ffi::_bindgen_ty_16::{RTE_MBUF_L2_LEN_BITS, RTE_MBUF_L3_LEN_BITS};
+use ffi::_bindgen_ty_14::{RTE_MBUF_L2_LEN_BITS, RTE_MBUF_L3_LEN_BITS};
 
 pub use self::allocator::Allocator;
 #[cfg(any(test, feature = "test-utils"))]

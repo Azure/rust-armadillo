@@ -1,9 +1,6 @@
 #[cfg(test)]
 extern crate self as rte;
 
-#[macro_use]
-pub mod utils;
-pub mod acl;
 pub mod ethdev;
 pub mod launch;
 pub mod lcore;

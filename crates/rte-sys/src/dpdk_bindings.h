@@ -1,7 +1,6 @@
 /// known issues:
 // 1. https://github.com/rust-lang/rust/issues/54341
 
-#include <rte_acl.h>
 #include <rte_eal.h>
 #include <rte_errno.h>
 #include <rte_ethdev.h>
@@ -11,13 +10,6 @@
 
 // Used for testing to initialize lcore ids for all threads while runing in parallel
 void _rte_set_mock_lcore(uint32_t lcore_id);
-/* workaround to an anonymous enum defined by DPDK  */
-typedef enum
-{
-    DDOS_RTE_ACL_FIELD_TYPE_MASK = RTE_ACL_FIELD_TYPE_MASK,
-    DDOS_RTE_ACL_FIELD_TYPE_RANGE = RTE_ACL_FIELD_TYPE_RANGE,
-    DDOS_RTE_ACL_FIELD_TYPE_BITMASK = RTE_ACL_FIELD_TYPE_BITMASK
-} DDOS_RTE_ACL_FIELD_TYPE;
 
 // bindgen can't generate bindings for static functions defined in C
 // header files. these shims are necessary to expose them to FFI.
