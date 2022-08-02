@@ -54,6 +54,10 @@ pub struct Timer<T> {
     p: PhantomData<T>, // for type
 }
 
+fn millis_to_ticks(millis: u64) -> u64 {
+    unsafe { (ffi::rte_get_tsc_hz() / 1000) * millis }
+}
+
 impl<T> Timer<T> {
     #[inline]
     pub fn new<'a>(callback: TimerCallback<T>, arg: &'a T) -> Self {
@@ -84,11 +88,11 @@ impl<T> Timer<T> {
     }
 
     #[inline]
-    fn inner_reset(&mut self, ticks: u64, timer_type: TimerType) -> Result<()> {
+    fn inner_reset(&mut self, time_ms: u64, timer_type: TimerType) -> Result<()> {
         unsafe {
             ffi::rte_timer_reset(
                 self.as_raw(),
-                ticks,
+                millis_to_ticks(time_ms),
                 timer_type.raw(),
                 *lcore::current(),
                 Some(self.stub),
@@ -100,13 +104,13 @@ impl<T> Timer<T> {
     }
 
     #[inline]
-    pub fn reset(&mut self, ticks: u64) -> Result<()> {
-        self.inner_reset(ticks, TimerType::Single)
+    pub fn reset(&mut self, time_ms: u64) -> Result<()> {
+        self.inner_reset(time_ms, TimerType::Single)
     }
 
     #[inline]
-    pub fn reset_periodical(&mut self, ticks: u64) -> Result<()> {
-        self.inner_reset(ticks, TimerType::Periodical)
+    pub fn reset_periodical(&mut self, time_ms: u64) -> Result<()> {
+        self.inner_reset(time_ms, TimerType::Periodical)
     }
 
     #[inline]
@@ -127,9 +131,9 @@ impl<T> Drop for Timer<T> {
 }
 
 #[inline]
-pub fn periodical_mut_timer<T>(ticks: u64, callback: TimerCallbackMut<T>, arg_mut: &mut T) -> Result<Timer<T>> {
+pub fn periodical_mut_timer<T>(time_ms: u64, callback: TimerCallbackMut<T>, arg_mut: &mut T) -> Result<Timer<T>> {
     let mut timer = Timer::new_mut(callback, arg_mut);
-    timer.reset_periodical(ticks).map(|_| timer)
+    timer.reset_periodical(time_ms).map(|_| timer)
 }
 
 pub fn manage() -> Result<()> {
@@ -144,11 +148,10 @@ pub fn subsystem_init() -> Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use std::cell::RefCell;
+    use std::{cell::RefCell, thread::sleep, time::Duration};
 
     use super::*;
     use crate::test_utils::rte_test;
-
     struct DummyArg {
         x: u64,
         y: u64,
@@ -173,6 +176,7 @@ mod tests {
         let arg = DummyArg { x: 5, y: 10, calls_count: RefCell::new(0) };
         let mut timer = Timer::new(dummy_callback, &arg);
         timer.reset(1).unwrap();
+        sleep(Duration::from_millis(10));
         manage().unwrap();
         assert_eq!(*arg.calls_count.borrow(), 1);
     }
@@ -182,6 +186,7 @@ mod tests {
         let mut arg = DummyArg { x: 5, y: 10, calls_count: RefCell::new(0) };
         let mut timer = Timer::new_mut(dummy_mut_callback, &mut arg);
         timer.reset(1).unwrap();
+        sleep(Duration::from_millis(10));
         manage().unwrap();
         assert_eq!(*arg.calls_count.borrow(), 1);
         assert_eq!(arg.x, 7);
@@ -192,8 +197,10 @@ mod tests {
         let arg = DummyArg { x: 5, y: 10, calls_count: RefCell::new(0) };
         let mut timer = Timer::new(dummy_callback, &arg);
         timer.reset_periodical(1).unwrap();
+        sleep(Duration::from_millis(10));
         manage().unwrap();
         assert_eq!(*arg.calls_count.borrow(), 1);
+        sleep(Duration::from_millis(10));
         manage().unwrap();
         assert_eq!(*arg.calls_count.borrow(), 2);
     }
@@ -202,10 +209,12 @@ mod tests {
     fn periodical_mut() {
         let mut arg = DummyArg { x: 5, y: 10, calls_count: RefCell::new(0) };
         let _timer = periodical_mut_timer(1, dummy_mut_callback, &mut arg);
+        sleep(Duration::from_millis(10));
         manage().unwrap();
         assert_eq!(*arg.calls_count.borrow(), 1);
         assert_eq!(arg.x, 7);
         arg.x = 5; // so next callback's assert work
+        sleep(Duration::from_millis(10));
         manage().unwrap();
         assert_eq!(*arg.calls_count.borrow(), 2);
         assert_eq!(arg.x, 7);
