@@ -8,7 +8,7 @@
 #include <rte_malloc.h>
 #include <rte_timer.h>
 
-// Used for testing to initialize lcore ids for all threads while runing in parallel
+// Used for testing to initialize lcore ids for all threads while running in parallel
 void _rte_set_mock_lcore(uint32_t lcore_id);
 
 // bindgen can't generate bindings for static functions defined in C

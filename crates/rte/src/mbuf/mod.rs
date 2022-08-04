@@ -14,7 +14,7 @@ use ffi::_bindgen_ty_14::{RTE_MBUF_L2_LEN_BITS, RTE_MBUF_L3_LEN_BITS};
 pub use self::allocator::Allocator;
 #[cfg(any(test, feature = "test-utils"))]
 pub use self::allocator::GlobalAllocator;
-use crate::{ethdev::PktTxOffloadHashFunc, mempool::MemoryPool};
+use crate::{flags::PktTxOffload, mempool::MemoryPool};
 
 /// This struct is a Rust-y wrapper around a pointer to DPDK's [`rte_mbuf`](ffi::rte_mbuf) struct.
 ///
@@ -208,9 +208,9 @@ where
 
     /// Enables (bitwise-or) the given flags on the [`ol_flags`](https://doc.dpdk.org/api-2.2/structrte__mbuf.html#a319d580a6e1ef13692631d7b0d6d5c98) field.
     ///
-    /// See also: [`PktTxOffloadHashFunc`].
+    /// See also: [`PktTxOffload`].
     #[inline]
-    pub fn enable_ol_flags(&mut self, flags: PktTxOffloadHashFunc) {
+    pub fn enable_ol_flags(&mut self, flags: PktTxOffload) {
         unsafe {
             let mbuf = self.ptr.as_mut();
             mbuf.ol_flags |= flags.bits();

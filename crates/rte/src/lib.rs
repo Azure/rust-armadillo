@@ -2,6 +2,7 @@
 extern crate self as rte;
 
 pub mod ethdev;
+pub mod flags;
 pub mod launch;
 pub mod lcore;
 pub mod mbuf;

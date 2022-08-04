@@ -7,7 +7,7 @@ const GENERATED_DIR: &str = "../build/generated";
 const GENERATED_FILE: &str = "dpdk_bindings.rs";
 
 fn bind() {
-    cc::Build::new().file("src/stub.c").flag("-march=broadwell").compile("rte_stub");
+    cc::Build::new().file("src/stub.c").flag("-mssse3").compile("rte_stub");
 
     fs::create_dir_all(GENERATED_DIR).unwrap();
 
@@ -29,7 +29,6 @@ fn bind() {
         .derive_partialeq(true)
         .default_enum_style(bindgen::EnumVariation::ModuleConsts)
         .clang_arg("-finline-functions")
-        .clang_arg("-march=broadwell")
         .rustfmt_bindings(true)
         .layout_tests(false)
         .generate()

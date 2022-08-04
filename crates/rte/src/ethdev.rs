@@ -5,12 +5,16 @@ use std::{
 };
 
 use arrayvec::ArrayVec;
-use bitflags::bitflags;
 use ffi::RTE_MAX_ETHPORTS;
 use mac_addr::MacAddr;
 use rte_error::ReturnValue as _;
 
-use crate::{lcore::SocketId, mbuf::MBuf, mempool, Result};
+use crate::{
+    flags::{EthLinkSpeed, EthRss},
+    lcore::SocketId,
+    mbuf::MBuf,
+    mempool, Result,
+};
 
 pub type PortId = u16;
 pub type QueueId = u16;
@@ -156,7 +160,7 @@ pub trait EthDevice {
 
     /// Send a burst of output packets on a transmit queue of an Ethernet device.
     ///
-    /// Packets that have been successfuly sent will be removed from `tx_pkts`, any `MBufs` remaining in the array
+    /// Packets that have been successfully sent will be removed from `tx_pkts`, any `MBufs` remaining in the array
     /// after this method has completed are packets that were NOT sent.
     fn tx_burst<const CAP: usize>(&self, queue_id: QueueId, tx_pkts: &mut ArrayVec<MBuf, CAP>);
 
@@ -422,234 +426,10 @@ pub type RawEthDeviceInfo = ffi::rte_eth_dev_info;
 
 pub type RawEthDeviceStats = ffi::rte_eth_stats;
 
-bitflags! {
-    /// Definitions used for VMDQ pool rx mode setting
-    pub struct EthVmdqRxMode : u16 {
-        /// accept untagged packets.
-        const ETH_VMDQ_ACCEPT_UNTAG     = 0x0001;
-        /// accept packets in multicast table .
-        const ETH_VMDQ_ACCEPT_HASH_MC   = 0x0002;
-        /// accept packets in unicast table.
-        const ETH_VMDQ_ACCEPT_HASH_UC   = 0x0004;
-        /// accept broadcast packets.
-        const ETH_VMDQ_ACCEPT_BROADCAST = 0x0008;
-        /// multicast promiscuous.
-        const ETH_VMDQ_ACCEPT_MULTICAST = 0x0010;
-    }
-}
-
-bitflags! {
-    /// A set of values to identify what method is to be used to route packets to multiple queues.
-    pub struct EthRxMultiQueueMode: u32 {
-        const ETH_MQ_RX_RSS_FLAG    = 0x1;
-        const ETH_MQ_RX_DCB_FLAG    = 0x2;
-        const ETH_MQ_RX_VMDQ_FLAG   = 0x4;
-    }
-}
-
-bitflags! {
-    /// Definitions used for VLAN Offload functionality
-    pub struct EthVlanOffloadMode: i32 {
-        /// VLAN Strip  On/Off
-        const ETH_VLAN_STRIP_OFFLOAD  = 0x0001;
-        /// VLAN Filter On/Off
-        const ETH_VLAN_FILTER_OFFLOAD = 0x0002;
-        /// VLAN Extend On/Off
-        const ETH_VLAN_EXTEND_OFFLOAD = 0x0004;
-
-        /// VLAN Strip  setting mask
-        const ETH_VLAN_STRIP_MASK     = 0x0001;
-        /// VLAN Filter  setting mask
-        const ETH_VLAN_FILTER_MASK    = 0x0002;
-        /// VLAN Extend  setting mask
-        const ETH_VLAN_EXTEND_MASK    = 0x0004;
-        /// VLAN ID is in lower 12 bits
-        const ETH_VLAN_ID_MAX         = 0x0FFF;
-    }
-}
-
-bitflags! {
-    pub struct RxOffloadHashFunc: u32 {
-        const RX_OFFLOAD_VLAN_STRIP = ffi::DEV_RX_OFFLOAD_VLAN_STRIP;
-        const RX_OFFLOAD_IPV4_CKSUM = ffi::DEV_RX_OFFLOAD_IPV4_CKSUM;
-        const RX_OFFLOAD_UDP_CKSUM = ffi::DEV_RX_OFFLOAD_UDP_CKSUM;
-        const RX_OFFLOAD_TCP_CKSUM = ffi::DEV_RX_OFFLOAD_TCP_CKSUM;
-        const RX_OFFLOAD_TCP_LRO = ffi::DEV_RX_OFFLOAD_TCP_LRO;
-        const RX_OFFLOAD_QINQ_STRIP = ffi::DEV_RX_OFFLOAD_QINQ_STRIP;
-        const RX_OFFLOAD_OUTER_IPV4_CKS = ffi::DEV_RX_OFFLOAD_OUTER_IPV4_CKSUM;
-        const RX_OFFLOAD_MACSEC_STRIP = ffi::DEV_RX_OFFLOAD_MACSEC_STRIP;
-        const RX_OFFLOAD_HEADER_SPLIT = ffi::DEV_RX_OFFLOAD_HEADER_SPLIT;
-        const RX_OFFLOAD_VLAN_FILTER = ffi::DEV_RX_OFFLOAD_VLAN_FILTER;
-        const RX_OFFLOAD_VLAN_EXTEND = ffi::DEV_RX_OFFLOAD_VLAN_EXTEND;
-        const RX_OFFLOAD_JUMBO_FRAME = ffi::DEV_RX_OFFLOAD_JUMBO_FRAME;
-        const RX_OFFLOAD_SCATTER = ffi::DEV_RX_OFFLOAD_SCATTER;
-        const RX_OFFLOAD_TIMESTAMP = ffi::DEV_RX_OFFLOAD_TIMESTAMP;
-        const RX_OFFLOAD_SECURITY = ffi::DEV_RX_OFFLOAD_SECURITY;
-        const RX_OFFLOAD_KEEP_CRC = ffi::DEV_RX_OFFLOAD_KEEP_CRC;
-        const RX_OFFLOAD_SCTP_CKSUM = ffi::DEV_RX_OFFLOAD_SCTP_CKSUM;
-        const RX_OFFLOAD_OUTER_UDP_CKSU = ffi::DEV_RX_OFFLOAD_OUTER_UDP_CKSUM;
-        const RX_OFFLOAD_RSS_HASH = ffi::DEV_RX_OFFLOAD_RSS_HASH;
-    }
-}
-
-bitflags! {
-    pub struct TxOffloadsHashFunc: u32 {
-        const TX_OFFLOAD_VLAN_INSERT = ffi::DEV_TX_OFFLOAD_VLAN_INSERT;
-        const TX_OFFLOAD_IPV4_CKSUM = ffi::DEV_TX_OFFLOAD_IPV4_CKSUM;
-        const TX_OFFLOAD_UDP_CKSUM = ffi::DEV_TX_OFFLOAD_UDP_CKSUM;
-        const TX_OFFLOAD_TCP_CKSUM = ffi::DEV_TX_OFFLOAD_TCP_CKSUM;
-        const TX_OFFLOAD_SCTP_CKSUM = ffi::DEV_TX_OFFLOAD_SCTP_CKSUM;
-        const TX_OFFLOAD_TCP_TSO = ffi::DEV_TX_OFFLOAD_TCP_TSO;
-        const TX_OFFLOAD_UDP_TSO = ffi::DEV_TX_OFFLOAD_UDP_TSO;
-        const TX_OFFLOAD_OUTER_IPV4_CKSUM = ffi::DEV_TX_OFFLOAD_OUTER_IPV4_CKSUM;
-        const TX_OFFLOAD_QINQ_INSERT = ffi::DEV_TX_OFFLOAD_QINQ_INSERT;
-        const TX_OFFLOAD_VXLAN_TNL_TSO = ffi::DEV_TX_OFFLOAD_VXLAN_TNL_TSO;
-        const TX_OFFLOAD_GRE_TNL_TSO = ffi::DEV_TX_OFFLOAD_GRE_TNL_TSO;
-        const TX_OFFLOAD_IPIP_TNL_TSO = ffi::DEV_TX_OFFLOAD_IPIP_TNL_TSO;
-        const TX_OFFLOAD_GENEVE_TNL_TSO = ffi::DEV_TX_OFFLOAD_GENEVE_TNL_TSO;
-        const TX_OFFLOAD_MACSEC_INSERT = ffi::DEV_TX_OFFLOAD_MACSEC_INSERT;
-        const TX_OFFLOAD_MT_LOCKFREE = ffi::DEV_TX_OFFLOAD_MT_LOCKFREE;
-        const TX_OFFLOAD_MULTI_SEGS = ffi::DEV_TX_OFFLOAD_MULTI_SEGS;
-        const TX_OFFLOAD_MBUF_FAST_FREE = ffi::DEV_TX_OFFLOAD_MBUF_FAST_FREE;
-        const TX_OFFLOAD_SECURITY = ffi::DEV_TX_OFFLOAD_SECURITY;
-        const TX_OFFLOAD_UDP_TNL_TSO = ffi::DEV_TX_OFFLOAD_UDP_TNL_TSO;
-        const TX_OFFLOAD_IP_TNL_TSO = ffi::DEV_TX_OFFLOAD_IP_TNL_TSO;
-        const TX_OFFLOAD_OUTER_UDP_CKSUM = ffi::DEV_TX_OFFLOAD_OUTER_UDP_CKSUM;
-        const TX_OFFLOAD_SEND_ON_TIMESTAMP = ffi::DEV_TX_OFFLOAD_SEND_ON_TIMESTAMP;
-    }
-}
-
-bitflags! {
-    pub struct PktTxOffloadHashFunc: u64 {
-        const PKT_TX_OUTER_UDP_CKSUM = ffi::PKT_TX_OUTER_UDP_CKSUM;
-        const PKT_TX_UDP_SEG = ffi::PKT_TX_UDP_SEG;
-        const PKT_TX_SEC_OFFLOAD = ffi::PKT_TX_SEC_OFFLOAD;
-        const PKT_TX_MACSEC = ffi::PKT_TX_MACSEC;
-        const PKT_TX_TUNNEL_VXLAN = ffi::PKT_TX_TUNNEL_VXLAN;
-        const PKT_TX_TUNNEL_GRE = ffi::PKT_TX_TUNNEL_GRE;
-        const PKT_TX_TUNNEL_IPIP = ffi::PKT_TX_TUNNEL_IPIP;
-        const PKT_TX_TUNNEL_GENEVE = ffi::PKT_TX_TUNNEL_GENEVE;
-        const PKT_TX_TUNNEL_MPLSINUDP = ffi::PKT_TX_TUNNEL_MPLSINUDP;
-        const PKT_TX_TUNNEL_VXLAN_GPE = ffi::PKT_TX_TUNNEL_VXLAN_GPE;
-        const PKT_TX_TUNNEL_GTP = ffi::PKT_TX_TUNNEL_GTP;
-        const PKT_TX_TUNNEL_IP = ffi::PKT_TX_TUNNEL_IP;
-        const PKT_TX_TUNNEL_UDP = ffi::PKT_TX_TUNNEL_UDP;
-        const PKT_TX_TUNNEL_MASK = ffi::PKT_TX_TUNNEL_MASK;
-        const PKT_TX_QINQ = ffi::PKT_TX_QINQ;
-        const PKT_TX_QINQ_PKT = ffi::PKT_TX_QINQ_PKT;
-        const PKT_TX_TCP_SEG = ffi::PKT_TX_TCP_SEG;
-        const PKT_TX_IEEE1588_TMST = ffi::PKT_TX_IEEE1588_TMST;
-        const PKT_TX_TCP_CKSUM = ffi::PKT_TX_TCP_CKSUM;
-        const PKT_TX_SCTP_CKSUM = ffi::PKT_TX_SCTP_CKSUM;
-        const PKT_TX_UDP_CKSUM = ffi::PKT_TX_UDP_CKSUM;
-        const PKT_TX_L4_MASK = ffi::PKT_TX_L4_MASK;
-        const PKT_TX_IP_CKSUM = ffi::PKT_TX_IP_CKSUM;
-        const PKT_TX_IPV4 = ffi::PKT_TX_IPV4;
-        const PKT_TX_IPV6 = ffi::PKT_TX_IPV6;
-        const PKT_TX_VLAN = ffi::PKT_TX_VLAN;
-        const PKT_TX_VLAN_PKT = ffi::PKT_TX_VLAN_PKT;
-        const PKT_TX_OUTER_IP_CKSUM = ffi::PKT_TX_OUTER_IP_CKSUM;
-        const PKT_TX_OUTER_IPV4 = ffi::PKT_TX_OUTER_IPV4;
-        const PKT_TX_OUTER_IPV6 = ffi::PKT_TX_OUTER_IPV6;
-        const PKT_TX_OFFLOAD_MASK = ffi::PKT_TX_OFFLOAD_MASK;
-
-        // Flags to enable offloading of IPv4 header checksum calculation
-        const IPV4_HDR_CHECKSUM =
-            Self::PKT_TX_IP_CKSUM.bits |
-            Self::PKT_TX_IPV4.bits;
-
-        // TODO - offload TCP checksum calculation https://msazure.visualstudio.com/One/_workitems/edit/14335353
-        // Flags to enable offloading of TCP (over IPv4) and IPv4 header checksums calculations
-        const IPV4_HDR_TCP_CHECKSUMS =
-            Self::PKT_TX_IP_CKSUM.bits |
-            Self::PKT_TX_TCP_CKSUM.bits |
-            Self::PKT_TX_IPV4.bits;
-
-        // TODO - offload TCP checksum calculation https://msazure.visualstudio.com/One/_workitems/edit/14335353
-        // Flags to enable offloading of TCP (over IPv6) checksums calculation (there is no checksum in IPv6 headers)
-        const IPV6_TCP_CHECKSUMS =
-            Self::PKT_TX_TCP_CKSUM.bits |
-            Self::PKT_TX_IPV6.bits;
-    }
-}
-/**
- * A set of values to identify what method is to be used to transmit
- * packets using multi-TCs.
- */
-pub type EthTxMultiQueueMode = ffi::rte_eth_tx_mq_mode::Type;
-
-bitflags! {
-    /// The RSS offload types are defined based on flow types which are defined
-    /// in rte_eth_ctrl.h. Different NIC hardwares may support different RSS offload
-    /// types. The supported flow types or RSS offload types can be queried by
-    /// rte_eth_dev_info_get().
-    #[derive(Default)]
-    pub struct RssHashFunc: u64 {
-        const ETH_RSS_IPV4               = 1 << ffi::RTE_ETH_FLOW_IPV4;
-        const ETH_RSS_FRAG_IPV4          = 1 << ffi::RTE_ETH_FLOW_FRAG_IPV4;
-        const ETH_RSS_NONFRAG_IPV4_TCP   = 1 << ffi::RTE_ETH_FLOW_NONFRAG_IPV4_TCP;
-        const ETH_RSS_NONFRAG_IPV4_UDP   = 1 << ffi::RTE_ETH_FLOW_NONFRAG_IPV4_UDP;
-        const ETH_RSS_NONFRAG_IPV4_SCTP  = 1 << ffi::RTE_ETH_FLOW_NONFRAG_IPV4_SCTP;
-        const ETH_RSS_NONFRAG_IPV4_OTHER = 1 << ffi::RTE_ETH_FLOW_NONFRAG_IPV4_OTHER;
-        const ETH_RSS_IPV6               = 1 << ffi::RTE_ETH_FLOW_IPV6;
-        const ETH_RSS_FRAG_IPV6          = 1 << ffi::RTE_ETH_FLOW_FRAG_IPV6;
-        const ETH_RSS_NONFRAG_IPV6_TCP   = 1 << ffi::RTE_ETH_FLOW_NONFRAG_IPV6_TCP;
-        const ETH_RSS_NONFRAG_IPV6_UDP   = 1 << ffi::RTE_ETH_FLOW_NONFRAG_IPV6_UDP;
-        const ETH_RSS_NONFRAG_IPV6_SCTP  = 1 << ffi::RTE_ETH_FLOW_NONFRAG_IPV6_SCTP;
-        const ETH_RSS_NONFRAG_IPV6_OTHER = 1 << ffi::RTE_ETH_FLOW_NONFRAG_IPV6_OTHER;
-        const ETH_RSS_L2_PAYLOAD         = 1 << ffi::RTE_ETH_FLOW_L2_PAYLOAD;
-        const ETH_RSS_IPV6_EX            = 1 << ffi::RTE_ETH_FLOW_IPV6_EX;
-        const ETH_RSS_IPV6_TCP_EX        = 1 << ffi::RTE_ETH_FLOW_IPV6_TCP_EX;
-        const ETH_RSS_IPV6_UDP_EX        = 1 << ffi::RTE_ETH_FLOW_IPV6_UDP_EX;
-
-        const ETH_RSS_IP =
-            Self::ETH_RSS_IPV4.bits |
-            Self::ETH_RSS_FRAG_IPV4.bits |
-            Self::ETH_RSS_NONFRAG_IPV4_OTHER.bits |
-            Self::ETH_RSS_IPV6.bits |
-            Self::ETH_RSS_FRAG_IPV6.bits |
-            Self::ETH_RSS_NONFRAG_IPV6_OTHER.bits |
-            Self::ETH_RSS_IPV6_EX.bits;
-
-        const ETH_RSS_UDP =
-            Self::ETH_RSS_NONFRAG_IPV4_UDP.bits |
-            Self::ETH_RSS_NONFRAG_IPV6_UDP.bits |
-            Self::ETH_RSS_IPV6_UDP_EX.bits;
-
-        const ETH_RSS_TCP =
-            Self::ETH_RSS_NONFRAG_IPV4_TCP.bits |
-            Self::ETH_RSS_NONFRAG_IPV6_TCP.bits |
-            Self::ETH_RSS_IPV6_TCP_EX.bits;
-
-        const ETH_RSS_SCTP =
-            Self::ETH_RSS_NONFRAG_IPV4_SCTP.bits |
-            Self::ETH_RSS_NONFRAG_IPV6_SCTP.bits;
-
-        /**< Mask of valid RSS hash protocols */
-        const ETH_RSS_PROTO_MASK =
-            Self::ETH_RSS_IPV4.bits |
-            Self::ETH_RSS_FRAG_IPV4.bits |
-            Self::ETH_RSS_NONFRAG_IPV4_TCP.bits |
-            Self::ETH_RSS_NONFRAG_IPV4_UDP.bits |
-            Self::ETH_RSS_NONFRAG_IPV4_SCTP.bits |
-            Self::ETH_RSS_NONFRAG_IPV4_OTHER.bits |
-            Self::ETH_RSS_IPV6.bits |
-            Self::ETH_RSS_FRAG_IPV6.bits |
-            Self::ETH_RSS_NONFRAG_IPV6_TCP.bits |
-            Self::ETH_RSS_NONFRAG_IPV6_UDP.bits |
-            Self::ETH_RSS_NONFRAG_IPV6_SCTP.bits |
-            Self::ETH_RSS_NONFRAG_IPV6_OTHER.bits |
-            Self::ETH_RSS_L2_PAYLOAD.bits |
-            Self::ETH_RSS_IPV6_EX.bits |
-            Self::ETH_RSS_IPV6_TCP_EX.bits |
-            Self::ETH_RSS_IPV6_UDP_EX.bits;
-    }
-}
-
 #[derive(Default, Clone, Copy)]
 pub struct EthRssConf {
     pub key: Option<[u8; 40]>,
-    pub hash: RssHashFunc,
+    pub hash: EthRss,
 }
 
 #[derive(Default, Clone, Copy)]
@@ -664,37 +444,9 @@ pub struct RxAdvConf {
 #[derive(Clone, Copy)]
 pub enum TxAdvConf {}
 
-bitflags! {
-    /// Device supported speeds bitmap flags
-    pub struct LinkSpeed: u32 {
-        /**< Autonegotiate (all speeds) */
-        const ETH_LINK_SPEED_AUTONEG  = 0;
-        /**< Disable autoneg (fixed speed) */
-        const ETH_LINK_SPEED_FIXED    = 1 <<  0;
-        /**<  10 Mbps half-duplex */
-        const ETH_LINK_SPEED_10M_HD   = 1 <<  1;
-         /**<  10 Mbps full-duplex */
-        const ETH_LINK_SPEED_10M      = 1 <<  2;
-        /**< 100 Mbps half-duplex */
-        const ETH_LINK_SPEED_100M_HD  = 1 <<  3;
-        /**< 100 Mbps full-duplex */
-        const ETH_LINK_SPEED_100M     = 1 <<  4;
-        const ETH_LINK_SPEED_1G       = 1 <<  5;
-        const ETH_LINK_SPEED_2_5G     = 1 <<  6;
-        const ETH_LINK_SPEED_5G       = 1 <<  7;
-        const ETH_LINK_SPEED_10G      = 1 <<  8;
-        const ETH_LINK_SPEED_20G      = 1 <<  9;
-        const ETH_LINK_SPEED_25G      = 1 << 10;
-        const ETH_LINK_SPEED_40G      = 1 << 11;
-        const ETH_LINK_SPEED_50G      = 1 << 12;
-        const ETH_LINK_SPEED_56G      = 1 << 13;
-        const ETH_LINK_SPEED_100G     = 1 << 14;
-    }
-}
-
-impl Default for LinkSpeed {
+impl Default for EthLinkSpeed {
     fn default() -> Self {
-        LinkSpeed::ETH_LINK_SPEED_AUTONEG
+        EthLinkSpeed::SPEED_AUTONEG
     }
 }
 
@@ -709,7 +461,7 @@ pub struct EthConf {
     /// Otherwise, the bitmap defines the set of speeds to be advertised.
     /// If the special value ETH_LINK_SPEED_AUTONEG (0) is used,
     /// all speeds supported are advertised.
-    pub link_speeds: LinkSpeed,
+    pub link_speeds: EthLinkSpeed,
     /// Port RX configuration.
     pub rxmode: Option<EthRxMode>,
     /// Port TX configuration.
@@ -741,7 +493,7 @@ impl RawEthConf {
     }
 }
 
-impl<'a> From<&'a EthConf> for RawEthConf {
+impl From<&EthConf> for RawEthConf {
     fn from(c: &EthConf) -> Self {
         let mut conf: ffi::rte_eth_conf = Default::default();
 
@@ -760,7 +512,7 @@ impl<'a> From<&'a EthConf> for RawEthConf {
 
                 conf.rx_adv_conf.rss_conf.rss_key = rss_key as *mut _;
                 conf.rx_adv_conf.rss_conf.rss_key_len = rss_key_len;
-                conf.rx_adv_conf.rss_conf.rss_hf = rss_conf.hash.bits;
+                conf.rx_adv_conf.rss_conf.rss_hf = rss_conf.hash.bits();
             }
         }
 
@@ -769,6 +521,7 @@ impl<'a> From<&'a EthConf> for RawEthConf {
 }
 
 pub fn foreach() -> impl Iterator<Item = PortId> {
+    // todo: discuss with dolev
     (0..RTE_MAX_ETHPORTS as PortId)
         .filter(|port_id| port_id.is_valid() && port_id.get_owner_id() == ffi::RTE_ETH_DEV_NO_OWNER as u64)
 }
