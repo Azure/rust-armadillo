@@ -25,7 +25,7 @@ pub trait Allocator {
     unsafe fn free(mbuf: NonNull<ffi::rte_mbuf>);
 }
 
-impl Allocator for MemoryPool {
+impl<'a> Allocator for &'a MemoryPool {
     fn alloc(&self) -> Result<NonNull<ffi::rte_mbuf>> {
         unsafe { ffi::_rte_pktmbuf_alloc(self.0.as_ptr()) }.rte_ok()
     }

@@ -13,7 +13,8 @@ use crate::{
     flags::{EthLinkSpeed, EthRss},
     mbuf::MBuf,
     memory::SocketId,
-    mempool, Result,
+    mempool::MemoryPool,
+    Result,
 };
 
 pub type PortId = u16;
@@ -71,7 +72,7 @@ pub trait EthDevice {
         rx_queue_id: QueueId,
         nb_rx_desc: u16,
         rx_conf: Option<ffi::rte_eth_rxconf>,
-        mb_pool: &mut mempool::MemoryPool,
+        mempool: &mut MemoryPool,
     ) -> Result<&Self>;
 
     /// Allocate and set up a transmit queue for an Ethernet device.
@@ -156,13 +157,31 @@ pub trait EthDevice {
     /// The received packets will be appended to `rx_pkts`. This method uses the array's current capacity
     /// (i.e. `CAP - rx_pkts.len()`) as a buffer for the DPDK library to write the received packets into,
     /// so in order to utilize the array's entire capacity, it should be empty when calling this function.
-    fn rx_burst<const CAP: usize>(&self, queue_id: QueueId, rx_pkts: &mut ArrayVec<MBuf, CAP>);
+    ///
+    /// # Safety
+    /// It is up to the caller to guarantee that `mempool` matches the memory pool
+    /// used in the call to [`Self::rx_queue_setup`] for this queue.
+    unsafe fn rx_burst<'mempool, const CAP: usize>(
+        &self,
+        queue_id: QueueId,
+        mempool: &'mempool MemoryPool,
+        rx_pkts: &mut ArrayVec<MBuf<&'mempool MemoryPool>, CAP>,
+    );
 
     /// Send a burst of output packets on a transmit queue of an Ethernet device.
     ///
     /// Packets that have been successfully sent will be removed from `tx_pkts`, any `MBufs` remaining in the array
     /// after this method has completed are packets that were NOT sent.
-    fn tx_burst<const CAP: usize>(&self, queue_id: QueueId, tx_pkts: &mut ArrayVec<MBuf, CAP>);
+    ///
+    /// # Safety
+    /// It is up to the caller to guarantee that `mempool` matches the memory pool
+    /// used in the call to [`Self::tx_queue_setup`] for this queue.
+    unsafe fn tx_burst<'mempool, const CAP: usize>(
+        &self,
+        queue_id: QueueId,
+        mempool: &'mempool MemoryPool,
+        tx_pkts: &mut ArrayVec<MBuf<&'mempool MemoryPool>, CAP>,
+    );
 
     fn get_owner_id(&self) -> u64;
 
@@ -245,7 +264,7 @@ impl EthDevice for PortId {
         rx_queue_id: QueueId,
         nb_rx_desc: u16,
         rx_conf: Option<ffi::rte_eth_rxconf>,
-        mb_pool: &mut mempool::MemoryPool,
+        mempool: &mut MemoryPool,
     ) -> Result<&Self> {
         unsafe {
             ffi::rte_eth_rx_queue_setup(
@@ -254,7 +273,7 @@ impl EthDevice for PortId {
                 nb_rx_desc,
                 self.socket_id()?.get(),
                 rx_conf.as_ref().map(|conf| conf as *const _).unwrap_or(ptr::null()),
-                mb_pool.0.as_ptr(),
+                mempool.0.as_ptr(),
             )
         }
         .rte_ok()?;
@@ -386,29 +405,34 @@ impl EthDevice for PortId {
     }
 
     #[inline]
-    fn rx_burst<const CAP: usize>(&self, queue_id: QueueId, rx_pkts: &mut ArrayVec<MBuf, CAP>) {
+    unsafe fn rx_burst<'mempool, const CAP: usize>(
+        &self,
+        queue_id: QueueId,
+        _mempool: &'mempool MemoryPool,
+        rx_pkts: &mut ArrayVec<MBuf<&'mempool MemoryPool>, CAP>,
+    ) {
         let old_len = rx_pkts.len();
 
         // this code was adapted from the Vec::spare_capacity_mut method, which ArrayVec unfortunately does not have
-        let spare_cap = unsafe {
-            slice::from_raw_parts_mut(
-                rx_pkts.as_mut_ptr().add(old_len) as *mut MaybeUninit<MBuf>,
-                rx_pkts.remaining_capacity(),
-            )
-        };
+        let spare_cap = slice::from_raw_parts_mut(
+            rx_pkts.as_mut_ptr().add(old_len) as *mut MaybeUninit<MBuf<&'mempool MemoryPool>>,
+            rx_pkts.remaining_capacity(),
+        );
 
-        unsafe {
-            let received =
-                ffi::_rte_eth_rx_burst(*self, queue_id, spare_cap.as_mut_ptr() as _, spare_cap.len() as u16) as usize;
-            rx_pkts.set_len(old_len + received);
-        }
+        let received =
+            ffi::_rte_eth_rx_burst(*self, queue_id, spare_cap.as_mut_ptr() as _, spare_cap.len() as u16) as usize;
+        rx_pkts.set_len(old_len + received);
     }
 
     #[inline]
-    fn tx_burst<const CAP: usize>(&self, queue_id: QueueId, tx_pkts: &mut ArrayVec<MBuf, CAP>) {
-        let transmitted = unsafe {
-            ffi::_rte_eth_tx_burst(*self, queue_id, tx_pkts.as_mut_ptr() as _, tx_pkts.len() as u16) as usize
-        };
+    unsafe fn tx_burst<'mempool, const CAP: usize>(
+        &self,
+        queue_id: QueueId,
+        _mempool: &'mempool MemoryPool,
+        tx_pkts: &mut ArrayVec<MBuf<&'mempool MemoryPool>, CAP>,
+    ) {
+        let transmitted =
+            ffi::_rte_eth_tx_burst(*self, queue_id, tx_pkts.as_mut_ptr() as _, tx_pkts.len() as u16) as usize;
 
         // rte_eth_tx_burst assumes ownership of the mbufs that were successfuly transmitted,
         // so we remove them from tx_pkts and use mem::forget to prevent dropping (and freeing) them ourselves

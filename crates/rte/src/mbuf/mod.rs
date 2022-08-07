@@ -14,7 +14,7 @@ use ffi::_bindgen_ty_14::{RTE_MBUF_L2_LEN_BITS, RTE_MBUF_L3_LEN_BITS};
 pub use self::allocator::Allocator;
 #[cfg(any(test, feature = "test-utils"))]
 pub use self::allocator::GlobalAllocator;
-use crate::{flags::PktTxOffload, mempool::MemoryPool};
+use crate::flags::PktTxOffload;
 
 /// This struct is a Rust-y wrapper around a pointer to DPDK's [`rte_mbuf`](ffi::rte_mbuf) struct.
 ///
@@ -33,8 +33,8 @@ use crate::{flags::PktTxOffload, mempool::MemoryPool};
 /// which means it cannot be used in a threaded context in any way.
 /// ```rust
 /// # use static_assertions::assert_not_impl_any;
-/// # use rte::mbuf::MBuf;
-/// assert_not_impl_any!(MBuf: Send, Sync);
+/// # use rte::{mempool::MemoryPool, mbuf::MBuf};
+/// assert_not_impl_any!(MBuf<&MemoryPool>: Send, Sync);
 /// ```
 ///
 /// # Allocators
@@ -52,7 +52,7 @@ use crate::{flags::PktTxOffload, mempool::MemoryPool};
 /// # Implementation notes
 /// - This wrapper completely ignores all but the first segment of an mbuf.
 #[repr(transparent)]
-pub struct MBuf<A = MemoryPool>
+pub struct MBuf<A>
 where
     A: Allocator,
 {
@@ -67,13 +67,13 @@ where
     /// Allocate an empty mbuf with a default [allocator](Allocator).
     #[inline]
     pub fn new() -> Self {
-        Self::new_with_provider(&mut A::default())
+        Self::new_with_provider(&A::default())
     }
 
     /// Allocate an mbuf with a default [allocator](Allocator).
     #[inline]
     pub fn new_with_data<T: AsRef<[u8]>>(data: T) -> Self {
-        Self::new_with_provider_and_data(&mut A::default(), data)
+        Self::new_with_provider_and_data(&A::default(), data)
     }
 }
 
@@ -84,14 +84,14 @@ where
     /// Allocate an empty mbuf with the given [allocator](Allocator).
     #[track_caller]
     #[inline]
-    pub fn new_with_provider(provider: &mut A) -> Self {
+    pub fn new_with_provider(provider: &A) -> Self {
         let ptr = provider.alloc().expect("Could not allocate mbuf");
         Self { ptr, _marker: Default::default() }
     }
 
     /// Allocate an mbuf with the given [allocator](Allocator).
     #[inline]
-    pub fn new_with_provider_and_data<T: AsRef<[u8]>>(provider: &mut A, data: T) -> Self {
+    pub fn new_with_provider_and_data<T: AsRef<[u8]>>(provider: &A, data: T) -> Self {
         let mut mbuf = Self::new_with_provider(provider);
         mbuf.extend_from_slice(data.as_ref());
         mbuf
