@@ -221,3 +221,9 @@ bitflags! {
         const SPEED_200G     = ffi::ETH_LINK_SPEED_200G;
     }
 }
+
+impl Default for EthLinkSpeed {
+    fn default() -> Self {
+        EthLinkSpeed::SPEED_AUTONEG
+    }
+}
