@@ -10,8 +10,9 @@ libc = "0.2"
 once_cell = { version = "1.10", optional = true }
 static_assertions = "1"
 uuid = { version = "1.1", features = ["v4"], optional = true }
+nonmax = "0.5"
 
-ffi = { package = "rte-sys", path= "../rte-sys" }
+ffi = { package = "rte-sys", path = "../rte-sys" }
 mac-addr = { path = "../mac-addr" }
 rte-eal = { path = "../rte-eal", optional = true }
 rte-error = { path = "../rte-error" }

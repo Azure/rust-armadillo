@@ -7,12 +7,12 @@ use std::{
 use arrayvec::ArrayVec;
 use ffi::RTE_MAX_ETHPORTS;
 use mac_addr::MacAddr;
-use rte_error::ReturnValue as _;
+use rte_error::{Error, ReturnValue as _};
 
 use crate::{
     flags::{EthLinkSpeed, EthRss},
-    lcore::SocketId,
     mbuf::MBuf,
+    memory::SocketId,
     mempool, Result,
 };
 
@@ -55,7 +55,7 @@ pub trait EthDevice {
     fn set_mac_addr(&self, addr: MacAddr) -> Result<&Self>;
 
     /// Return the NUMA socket to which an Ethernet device is connected
-    fn socket_id(&self) -> SocketId;
+    fn socket_id(&self) -> Result<SocketId>;
 
     /// Check if port_id of device is attached
     fn is_valid(&self) -> bool;
@@ -228,8 +228,12 @@ impl EthDevice for PortId {
         Ok(self)
     }
 
-    fn socket_id(&self) -> SocketId {
-        unsafe { ffi::rte_eth_dev_socket_id(*self) }
+    fn socket_id(&self) -> Result<SocketId> {
+        // -1 is returned if the port_id (self) is out of range
+        let ret = unsafe { ffi::rte_eth_dev_socket_id(*self) };
+        // cast from i32 to u32 (e.g., -1 == u32::MAX)
+        let id = unsafe { *(&ret as *const _ as *const u32) };
+        SocketId::new(id).ok_or(Error(ret))
     }
 
     fn is_valid(&self) -> bool {
@@ -248,7 +252,7 @@ impl EthDevice for PortId {
                 *self,
                 rx_queue_id,
                 nb_rx_desc,
-                self.socket_id() as u32,
+                self.socket_id()?.get(),
                 rx_conf.as_ref().map(|conf| conf as *const _).unwrap_or(ptr::null()),
                 mb_pool.0.as_ptr(),
             )
@@ -268,7 +272,7 @@ impl EthDevice for PortId {
                 *self,
                 tx_queue_id,
                 nb_tx_desc,
-                self.socket_id() as u32,
+                self.socket_id()?.get(),
                 tx_conf.as_ref().map(|conf| conf as *const _).unwrap_or(ptr::null()),
             )
         }

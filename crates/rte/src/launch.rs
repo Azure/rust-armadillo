@@ -47,7 +47,7 @@ unsafe extern "C" fn lcore_stub<T: Send + 'static>(arg: *mut c_void) -> c_int {
 pub fn remote_launch_with_arg<T: Send + 'static>(callback: LcoreFunc<T>, arg: T, worker_id: lcore::Id) -> Result<()> {
     let ctxt = Box::into_raw(Box::new(LcoreContext { callback, arg })) as *mut c_void;
 
-    unsafe { ffi::rte_eal_remote_launch(Some(lcore_stub::<T>), ctxt, *worker_id) }.rte_ok()?;
+    unsafe { ffi::rte_eal_remote_launch(Some(lcore_stub::<T>), ctxt, worker_id.get()) }.rte_ok()?;
     Ok(())
 }
 
@@ -65,7 +65,7 @@ pub fn mp_remote_launch_with_arg<T: Send + 'static>(callback: LcoreFunc<T>, arg:
 impl lcore::Id {
     /// Get the state of the lcore identified by lcore_id.
     pub fn state(self) -> State {
-        unsafe { ffi::rte_eal_get_lcore_state(*self) }.into()
+        unsafe { ffi::rte_eal_get_lcore_state(self.get()) }.into()
     }
 }
 

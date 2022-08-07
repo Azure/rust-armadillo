@@ -8,7 +8,7 @@ use std::{
 
 use rte_error::ReturnValue as _;
 
-use crate::Result;
+use crate::{memory::SocketId, Result};
 
 #[repr(transparent)]
 pub struct MemoryPool(pub(crate) NonNull<ffi::rte_mempool>);
@@ -32,7 +32,7 @@ impl MemoryPool {
         cache_size: u32,
         private_size: u16,
         data_room_size: u16,
-        socket_id: i32,
+        socket_id: SocketId,
     ) -> Result<Self> {
         let name = CString::new(name).unwrap();
         let ops = ffi::RTE_MBUF_DEFAULT_MEMPOOL_OPS;
@@ -44,7 +44,7 @@ impl MemoryPool {
                 cache_size,
                 private_size,
                 data_room_size,
-                socket_id,
+                socket_id.get() as i32,
                 ops.as_ptr() as _,
             )
         }

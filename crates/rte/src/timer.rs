@@ -94,7 +94,7 @@ impl<T> Timer<T> {
                 self.as_raw(),
                 millis_to_ticks(time_ms),
                 timer_type.raw(),
-                *lcore::current(),
+                lcore::current().get(),
                 Some(self.stub),
                 self.ctxt_ptr,
             )

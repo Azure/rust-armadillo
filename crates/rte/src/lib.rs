@@ -6,6 +6,7 @@ pub mod flags;
 pub mod launch;
 pub mod lcore;
 pub mod mbuf;
+pub mod memory;
 pub mod mempool;
 pub mod timer;
 
