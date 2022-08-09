@@ -70,3 +70,29 @@ pub fn join_lcores() {
     debug_assert!(lcore::current().is_main());
     unsafe { ffi::rte_eal_mp_wait_lcore() }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::{thread, time::Duration};
+
+    use rte_test_macros::rte_test;
+    use util_macros::millis;
+
+    use super::*;
+
+    fn work(sleep_ms: u64) -> i32 {
+        thread::sleep(millis!(sleep_ms));
+        0
+    }
+
+    #[rte_test]
+    fn test_sanity() {
+        let workers = lcore::Id::iter_enabled(true).take(3).collect::<Vec<_>>();
+        for worker_id in &workers {
+            assert!(worker_id.launch(work, 300).is_ok());
+        }
+        assert!(workers.iter().all(|worker| worker.state() == State::Running));
+        join_lcores();
+        assert!(workers.iter().all(|worker| worker.state() == State::Wait));
+    }
+}
