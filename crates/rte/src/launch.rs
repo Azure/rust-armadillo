@@ -91,7 +91,6 @@ mod tests {
         for worker_id in &workers {
             assert!(worker_id.launch(work, 300).is_ok());
         }
-        assert!(workers.iter().all(|worker| worker.state() == State::Running));
         join_lcores();
         assert!(workers.iter().all(|worker| worker.state() == State::Wait));
     }
