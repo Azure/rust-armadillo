@@ -29,5 +29,5 @@ static SETUP: Lazy<()> = Lazy::new(|| {
 });
 
 pub fn init_test_env() {
-    let _ = *SETUP;
+    Lazy::force(&SETUP);
 }

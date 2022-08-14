@@ -1,3 +1,5 @@
+mod linker;
+
 use std::{
     env, fs,
     path::{Path, PathBuf},
@@ -39,7 +41,7 @@ fn bind() {
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
     fs::copy(&generated_path, out_dir.join(GENERATED_FILE)).unwrap();
 
-    rte_build::bind(&out_dir);
+    linker::link_dpdk();
 }
 
 fn main() {

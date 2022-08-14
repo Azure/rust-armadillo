@@ -1,4 +1,4 @@
-use std::{fmt, fs::File, io::Write, path::Path};
+use std::{collections::HashSet, fmt};
 
 /// Prune all unused device drivers from DPDK, cuts binaries size and build time by half.
 const IGNORED_STATIC_LIBS: &[&str] = &[
@@ -90,22 +90,21 @@ impl<'l> LibLink<'l> {
 
 impl<'l> fmt::Display for LibLink<'l> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "cargo:rustc-link-lib={}{}",
-            if self.is_static() {
-                // FIXME: "static:+whole-archive,-bundle="
-                "static="
-            } else {
-                ""
-            },
-            self.name
-        )?;
+        f.write_str("cargo:rustc-link-lib=")?;
+
+        if self.is_static() {
+            // see https://msazure.visualstudio.com/One/_git/Networking-DDoS-Datapath/pullrequest/5783930 for some historic
+            // context regarding the "whole-archive" and "bundle" link modifiers
+            f.write_str("static:+whole-archive,-bundle=")?;
+        }
+
+        f.write_str(self.name)?;
+
         Ok(())
     }
 }
 
-pub fn bind(out_dir: &Path) {
+pub fn link_dpdk() {
     let pkg = pkg_config::Config::new()
         .exactly_version("21.08.0")
         .statik(true)
@@ -120,7 +119,7 @@ pub fn bind(out_dir: &Path) {
     // pkg-config returns a list of libs, where static libs are specified as
     // ":librte_mempool_ring.a" and dynamic ones like "rte_mempool", so we'll use that
     // to parse them into two lists
-    let (mut static_libs, dyn_libs) = pkg
+    let (mut static_libs, mut dyn_libs) = pkg
         .libs
         .iter()
         .map(|lib| {
@@ -133,20 +132,11 @@ pub fn bind(out_dir: &Path) {
 
     static_libs.retain(|LibLink { name, .. }| !IGNORED_STATIC_LIBS.contains(name));
 
-    for link in static_libs.iter().chain(&dyn_libs) {
+    // some libraries appear as both static and dynamic, de-dup
+    let static_lib_names = static_libs.iter().map(|LibLink { name, .. }| name).collect::<HashSet<_>>();
+    dyn_libs.retain(|LibLink { name, .. }| !static_lib_names.contains(name));
+
+    for link in static_libs.into_iter().chain(dyn_libs) {
         println!("{link}");
     }
-
-    // TODO: https://msazure.visualstudio.com/One/_workitems/edit/13763345
-    // once the `whole-archive` feature is stabilized: https://github.com/rust-lang/rust/pull/93901
-    // we can:
-    // 1. remove the next block of code that generates "whole_archive_hack.rs"
-    //    (and the optional arg this function takes)
-    // 2. in the `Display` impl for `LibLink`, replace "static=" with "static:+whole-archive,-bundle="
-    // 3. remove all usages of this function apart from in the `rte-sys` crate's build script
-    let mut out_file = File::create(out_dir.join("whole_archive_hack.rs")).unwrap();
-    for LibLink { name, .. } in static_libs {
-        writeln!(out_file, r#"#[link(name = "{name}", kind = "static")]"#).unwrap();
-    }
-    writeln!(out_file, "{}", r#"extern "C" {}"#).unwrap();
 }
