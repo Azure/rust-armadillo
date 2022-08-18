@@ -85,6 +85,10 @@ mod tests {
         0
     }
 
+    #[ignore = "There's no guarantee that the UT will run in the main thread.
+    This means `debug_assert!`s verifying that functions run in the main thread might fail, which indeed happens occasionally in CI.
+    Can be fixed by changing the way RTE EAL is used in UT.
+    Tracked by: <https://msazure.visualstudio.com/One/_workitems/edit/15312324>"]
     #[rte_test]
     fn test_sanity() {
         let workers = lcore::Id::iter_enabled(true).take(3).collect::<Vec<_>>();
