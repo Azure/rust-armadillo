@@ -3,7 +3,7 @@ extern crate proc_macro;
 use proc_macro::TokenStream;
 use quote::quote;
 
-/// Run a test after an EAL and the RTE timer subsystem were initialized.
+/// Run a test after an EAL environment was initialized.
 ///
 /// Invoke as `#[rte_test(mock_lcore)]` to mock the current lcore when running the test.
 #[proc_macro_attribute]

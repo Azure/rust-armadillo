@@ -6,7 +6,6 @@
 #include <rte_ethdev.h>
 #include <rte_lcore.h>
 #include <rte_malloc.h>
-#include <rte_timer.h>
 
 // Used for testing to initialize lcore ids for all threads while running in parallel
 void _rte_set_mock_lcore(uint32_t lcore_id);
@@ -53,11 +52,6 @@ uint16_t _rte_eth_rx_burst(uint16_t port_id, uint16_t queue_id, struct rte_mbuf 
  * Send a burst of output packets on a transmit queue of an Ethernet device.
  */
 uint16_t _rte_eth_tx_burst(uint16_t port_id, uint16_t queue_id, struct rte_mbuf **tx_pkts, uint16_t nb_pkts);
-
-/**
- * Return the number of TSC cycles since boot.
- */
-uint64_t _rte_get_tsc_cycles(void);
 
 /**
  * Get the application private size of mbufs stored in a pktmbuf_pool.

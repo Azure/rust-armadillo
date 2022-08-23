@@ -2,7 +2,6 @@
 #include <rte_ethdev.h>
 #include <rte_mbuf.h>
 #include <rte_mempool.h>
-#include <rte_cycles.h>
 
 void _rte_set_mock_lcore(uint32_t lcore_id)
 {
@@ -49,15 +48,12 @@ uint16_t _rte_eth_tx_burst(uint16_t port_id, uint16_t queue_id, struct rte_mbuf 
     return rte_eth_tx_burst(port_id, queue_id, tx_pkts, nb_pkts);
 }
 
-uint64_t _rte_get_tsc_cycles(void)
+uint16_t _rte_pktmbuf_priv_size(struct rte_mempool *mp)
 {
-    return rte_get_tsc_cycles();
-}
-
-uint16_t _rte_pktmbuf_priv_size(struct rte_mempool *mp) {
     return rte_pktmbuf_priv_size(mp);
 }
 
-uint16_t _rte_pktmbuf_data_room_size(struct rte_mempool *mp) {
+uint16_t _rte_pktmbuf_data_room_size(struct rte_mempool *mp)
+{
     return rte_pktmbuf_data_room_size(mp);
 }

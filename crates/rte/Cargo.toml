@@ -6,7 +6,6 @@ edition = "2021"
 [dependencies]
 arrayvec = "0.7"
 bitflags = "1.2"
-libc = "0.2"
 once_cell = { version = "1.10", optional = true }
 static_assertions = "1"
 nonmax = "0.5"
