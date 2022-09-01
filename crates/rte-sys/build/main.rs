@@ -47,7 +47,5 @@ fn bind() {
 fn main() {
     bind();
 
-    // re-run build.rs upon changes
-    println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-changed=src/");
 }
