@@ -33,6 +33,8 @@ impl DerefMut for MacAddr {
 }
 
 impl MacAddr {
+    pub const BROADCAST: Self = Self([0xff; ETHER_ADDR_LEN as usize]);
+
     /// Creates a new MAC address from six eight-bit octets.
     ///
     /// The result will represent the MAC address a:b:c:d:e:f.
@@ -62,6 +64,11 @@ impl MacAddr {
     #[inline]
     pub fn is_zero(&self) -> bool {
         *self == Self::zeroed()
+    }
+
+    #[inline]
+    pub fn is_broadcast(&self) -> bool {
+        *self == Self::BROADCAST
     }
 }
 
