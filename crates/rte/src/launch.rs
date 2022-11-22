@@ -1,6 +1,10 @@
 //! Based on DPDK's `rte_launch.h` API: <https://doc.dpdk.org/api-21.08/rte__launch_8h.html>
 
-use std::os::raw::{c_int, c_void};
+use std::{
+    os::raw::{c_int, c_void},
+    panic::{catch_unwind, AssertUnwindSafe},
+    process,
+};
 
 use rte_error::ReturnValue as _;
 
@@ -35,7 +39,21 @@ struct ExecutionContext<T> {
 
 unsafe extern "C" fn lcore_stub<T: Send + 'static>(arg: *mut c_void) -> c_int {
     let ExecutionContext { entrypoint, arg } = *Box::from_raw(arg as *mut ExecutionContext<T>);
-    entrypoint(arg)
+
+    // any panics that occurred inside `entrypoint` should NOT be unwound back into EAL,
+    // this is unsafe and causes the rust panic mechanism to fail with a SIGABRT
+    let res = catch_unwind(AssertUnwindSafe(|| entrypoint(arg)));
+
+    match res {
+        Ok(status) => status,
+        Err(_) => {
+            // unlike regular OS threads which don't crash the entire process on panics,
+            // we'd like to bring down the whole process if one of the lcore workers has crashed.
+            // at this point, the panic's backtrace has already been written to stderr by the
+            // global rust panic hook
+            process::abort()
+        }
+    }
 }
 
 impl lcore::Id {
