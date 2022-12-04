@@ -177,8 +177,8 @@ bitflags! {
         const L2TPV3                = ffi::ETH_RSS_L2TPV3 as u64;
         const PFCP                  = ffi::ETH_RSS_PFCP as u64;
         const PPPOE                 = ffi::ETH_RSS_PPPOE as u64;
-        const ECPRI                 = ffi::ETH_RSS_ECPRI as u64;
-        const MPLS                  = ffi::ETH_RSS_MPLS as u64;
+        const ECPRI                 = ffi::ETH_RSS_ECPRI;
+        const MPLS                  = ffi::ETH_RSS_MPLS;
     }
 }
 
