@@ -1,3 +1,5 @@
+mod xstats;
+
 use std::{
     ffi::CStr,
     iter::from_fn,
@@ -9,6 +11,7 @@ use arrayvec::ArrayVec;
 use mac_addr::MacAddr;
 use rte_error::{Error, ReturnValue as _};
 
+pub use self::xstats::XStatsDefs;
 use crate::{mbuf::MBuf, memory::SocketId, mempool::MemoryPool, Result};
 
 pub const MAX_QUEUE: u16 = u16::MAX;
@@ -22,7 +25,7 @@ pub type IntrConf = ffi::rte_intr_conf;
 pub type Conf = ffi::rte_eth_conf;
 
 /// An ethernet device (port) and associated functionality from [here](https://doc.dpdk.org/api-21.08/rte__ethdev_8h.html)
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Clone)]
 pub struct EthDev {
     port_id: u16,
 }
