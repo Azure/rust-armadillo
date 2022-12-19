@@ -1,4 +1,6 @@
 mod allocator;
+mod metadata;
+mod ptr;
 
 use std::{
     fmt,
@@ -9,12 +11,12 @@ use std::{
     slice,
 };
 
-use ffi::_bindgen_ty_14::{RTE_MBUF_L2_LEN_BITS, RTE_MBUF_L3_LEN_BITS};
-
-pub use self::allocator::Allocator;
 #[cfg(any(test, feature = "test-utils"))]
 pub use self::allocator::GlobalAllocator;
-use crate::flags::PktTxOffload;
+pub use self::{
+    allocator::Allocator,
+    metadata::{MetadataExt, MetadataPart},
+};
 
 /// This struct is a Rust-y wrapper around a pointer to DPDK's [`rte_mbuf`](ffi::rte_mbuf) struct.
 ///
@@ -123,6 +125,31 @@ where
     fn data_len(&self) -> usize {
         unsafe { self.ptr.as_ref() }.data_len.into()
     }
+
+    /// "Splits" a mutable reference to `self` into two disjoint mutable references, one to the underlying buffer,
+    /// and one to a [`MetadataPart`], which (only) allows modifying metadata related to the `MBuf` pointed to by `self`.
+    #[inline]
+    pub fn split_metadata_mut<'a>(&'a mut self) -> (&'a mut [u8], MetadataPart<'a>) {
+        let this = self.ptr;
+
+        let data = self.deref_mut();
+
+        // Sanity check:
+        // make sure data buffer memory is completely nonoverlapping with mbuf struct,
+        // i.e.: ends before beginning of mbuf struct, or starts after it.
+        // this is the most important prerequisite for ensuring `MetadataPart<'a>` can
+        // coexist with `&'a mut [u8]`, without violating stacked borrows
+        debug_assert!(unsafe {
+            let this_ptr_range = this.as_ptr() as *const u8..this.as_ptr().add(1) as *const u8;
+            let data_ptr_range = data.as_ptr_range();
+
+            data_ptr_range.end <= this_ptr_range.start || data_ptr_range.start >= this_ptr_range.end
+        });
+
+        let metadata = MetadataPart::<'a> { ptr: this, _marker: PhantomData };
+
+        (data, metadata)
+    }
 }
 
 /// These method are equivilent to their [`Vec`] counterparts.
@@ -173,48 +200,12 @@ where
         self
     }
 
-    /// Extracts a mutable slice of the entire vector.
+    /// Extracts a mutable slice of the entire underlying buffer.
     ///
-    /// **TODO**: temporary hack, fix mbuf lifetimes <https://msazure.visualstudio.com/One/_workitems/edit/10357334>
+    /// Equivalent to `&mut mbuf[..]`.
     #[inline]
-    pub fn as_mut_slice(&mut self) -> &'static mut [u8] {
-        unsafe { mem::transmute::<&mut [u8], _>(self) }
-    }
-}
-
-impl<A> MBuf<A>
-where
-    A: Allocator,
-{
-    /// Sets the [`l2_len`](https://doc.dpdk.org/api-2.2/structrte__mbuf.html#aa25a7c259438b9eba28bcedc33846620) field.
-    #[inline]
-    pub fn set_l2_len(&mut self, len: u64) {
-        assert!(len < 1 << RTE_MBUF_L2_LEN_BITS);
-        unsafe {
-            let mbuf = self.ptr.as_mut();
-            mbuf.__bindgen_anon_3.__bindgen_anon_1.set_l2_len(len);
-        }
-    }
-
-    /// Sets the [`l3_len`](https://doc.dpdk.org/api-2.2/structrte__mbuf.html#a82a34cb6d5935a8c0f043f2783d6b42d) field.
-    #[inline]
-    pub fn set_l3_len(&mut self, len: u64) {
-        assert!(len < 1 << RTE_MBUF_L3_LEN_BITS);
-        unsafe {
-            let mbuf = self.ptr.as_mut();
-            mbuf.__bindgen_anon_3.__bindgen_anon_1.set_l3_len(len);
-        }
-    }
-
-    /// Enables (bitwise-or) the given flags on the [`ol_flags`](https://doc.dpdk.org/api-2.2/structrte__mbuf.html#a319d580a6e1ef13692631d7b0d6d5c98) field.
-    ///
-    /// See also: [`PktTxOffload`].
-    #[inline]
-    pub fn enable_ol_flags(&mut self, flags: PktTxOffload) {
-        unsafe {
-            let mbuf = self.ptr.as_mut();
-            mbuf.ol_flags |= flags.bits();
-        }
+    pub fn as_mut_slice(&mut self) -> &mut [u8] {
+        self
     }
 }
 
