@@ -15,7 +15,6 @@ use crate::{lcore, Result};
 pub enum State {
     Wait = ffi::rte_lcore_state_t::WAIT,
     Running = ffi::rte_lcore_state_t::RUNNING,
-    Finished = ffi::rte_lcore_state_t::FINISHED,
 }
 
 impl From<ffi::rte_lcore_state_t::Type> for State {
@@ -23,7 +22,6 @@ impl From<ffi::rte_lcore_state_t::Type> for State {
         match s {
             ffi::rte_lcore_state_t::WAIT => Ok(State::Wait),
             ffi::rte_lcore_state_t::RUNNING => Ok(State::Running),
-            ffi::rte_lcore_state_t::FINISHED => Ok(State::Finished),
             _ => Err(()),
         }
         .unwrap()

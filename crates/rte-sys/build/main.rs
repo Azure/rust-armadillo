@@ -22,9 +22,12 @@ fn bind() {
         // treat as opaque as per issue w/ combining align/packed:
         // https://github.com/rust-lang/rust-bindgen/issues/1538
         .opaque_type(r"rte_arp_ipv4|rte_arp_hdr")
+        // and this struct per this issue:
+        // https://github.com/rust-lang/rust-bindgen/issues/2179
+        .opaque_type("rte_l2tpv2_combined_msg_hdr")
         .allowlist_type(r"(rte|eth|DDOS)_.*")
         .allowlist_function(r"(_rte|rte|eth)_.*")
-        .allowlist_var(r"(RTE|EXT|DEV|ETH|MEMPOOL|PKT|LCORE|rte)_.*")
+        .allowlist_var(r"(_?RTE|EXT|DEV|ETH|MEMPOOL|PKT|LCORE|rte)_.*")
         .derive_copy(true)
         .derive_debug(true)
         .derive_default(true)

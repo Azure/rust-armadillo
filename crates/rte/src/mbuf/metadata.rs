@@ -1,6 +1,6 @@
 use std::{marker::PhantomData, ptr::NonNull};
 
-use ffi::_bindgen_ty_14::{RTE_MBUF_L2_LEN_BITS, RTE_MBUF_L3_LEN_BITS};
+use ffi::_bindgen_ty_13::{RTE_MBUF_L2_LEN_BITS, RTE_MBUF_L3_LEN_BITS};
 
 use super::ptr::AsPtr;
 use crate::flags::PktTxOffload;

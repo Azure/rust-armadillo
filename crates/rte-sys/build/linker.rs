@@ -25,6 +25,12 @@ const IGNORED_STATIC_LIBS: &[&str] = &[
     "rte_crypto_nitrox",
     "rte_crypto_octeontx",
     "rte_crypto_octeontx2",
+    "rte_dma_cnxk",
+    "rte_dma_dpaa",
+    "rte_dma_dpaa2",
+    "rte_dma_hisilicon",
+    "rte_dma_idxd",
+    "rte_dma_ioat",
     "rte_event_dpaa",
     "rte_event_dpaa2",
     "rte_event_dsw",
@@ -70,6 +76,7 @@ const IGNORED_STATIC_LIBS: &[&str] = &[
     "rte_raw_octeontx2_dma",
     "rte_raw_octeontx2_ep",
     "rte_regex_octeontx2",
+    "rte_vdpa_sfc",
 ];
 
 enum LinkType {
@@ -106,7 +113,7 @@ impl<'l> fmt::Display for LibLink<'l> {
 
 pub fn link_dpdk() {
     let pkg = pkg_config::Config::new()
-        .exactly_version("21.08.0")
+        .exactly_version("22.11.0")
         .statik(true)
         .cargo_metadata(false)
         .probe("libdpdk")

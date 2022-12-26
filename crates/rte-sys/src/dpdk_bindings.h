@@ -7,6 +7,8 @@
 #include <rte_lcore.h>
 #include <rte_malloc.h>
 
+#include "consts.h"
+
 // Used for testing to initialize lcore ids for all threads while running in parallel
 void _rte_set_mock_lcore(uint32_t lcore_id);
 

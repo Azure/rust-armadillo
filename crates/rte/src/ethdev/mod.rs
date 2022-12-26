@@ -18,10 +18,6 @@ pub const MAX_QUEUE: u16 = u16::MAX;
 
 pub type DeviceInfo = ffi::rte_eth_dev_info;
 pub type DeviceStats = ffi::rte_eth_stats;
-pub type EthRxMode = ffi::rte_eth_rxmode;
-pub type EthTxMode = ffi::rte_eth_txmode;
-pub type FdirConf = ffi::rte_fdir_conf;
-pub type IntrConf = ffi::rte_intr_conf;
 pub type Conf = ffi::rte_eth_conf;
 
 /// An ethernet device (port) and associated functionality from [here](https://doc.dpdk.org/api-21.08/rte__ethdev_8h.html)
@@ -239,7 +235,7 @@ pub trait DeviceInfoWrapper {
 
 impl DeviceInfoWrapper for DeviceInfo {
     fn get_device_name(&self) -> String {
-        unsafe { CStr::from_ptr((*self.device).name).to_str().unwrap().to_string() }
+        unsafe { CStr::from_ptr(ffi::rte_dev_name(self.device)).to_str().unwrap().to_string() }
     }
     fn get_driver_name(&self) -> String {
         unsafe { CStr::from_ptr(self.driver_name).to_str().unwrap().to_string() }

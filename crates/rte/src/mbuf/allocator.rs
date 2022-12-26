@@ -84,7 +84,7 @@ mod test_pool {
                     let mbuf = mbuf.as_mut();
                     mbuf.buf_addr = data;
                     mbuf.buf_len = BUF_SIZE as u16;
-                    mbuf.ol_flags &= ffi::EXT_ATTACHED_MBUF;
+                    mbuf.ol_flags &= ffi::RTE_MBUF_F_EXTERNAL;
                     mbuf.port = ffi::RTE_MBUF_PORT_INVALID as u16;
                 }
 
