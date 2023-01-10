@@ -21,7 +21,6 @@ once_cell = "1.10"
 
 rte-eal = { path = "../rte-eal" }
 rte-test-macros = { path = "../rte-test-macros" }
-util-macros = { path = "../util-macros" }
 
 [features]
 test-utils = ["rte-test-macros", "rte-eal", "once_cell"]

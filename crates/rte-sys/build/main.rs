@@ -1,19 +1,18 @@
 mod linker;
 
-use std::{
-    env, fs,
-    path::{Path, PathBuf},
-};
+use std::{env, path::PathBuf};
 
-const GENERATED_DIR: &str = "../build/generated";
 const GENERATED_FILE: &str = "dpdk_bindings.rs";
 
 fn bind() {
-    cc::Build::new().file("src/stub.c").flag("-mssse3").compile("rte_stub");
+    cc::Build::new()
+        .file("src/stub.c")
+        .flag("-mssse3")
+        .compile("rte_stub");
 
-    fs::create_dir_all(GENERATED_DIR).unwrap();
+    let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
 
-    let generated_path = Path::new(GENERATED_DIR).join(GENERATED_FILE);
+    let generated_path = out_dir.join(GENERATED_FILE);
 
     bindgen::Builder::default()
         .header("src/dpdk_bindings.h")
@@ -40,9 +39,6 @@ fn bind() {
         .expect("Unable to generate bindings")
         .write_to_file(&generated_path)
         .expect("Couldn't write bindings!");
-
-    let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
-    fs::copy(&generated_path, out_dir.join(GENERATED_FILE)).unwrap();
 
     linker::link_dpdk();
 }

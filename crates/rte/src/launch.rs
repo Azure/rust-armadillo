@@ -63,7 +63,9 @@ impl lcore::Id {
         debug_assert!(lcore::current().is_main());
         // Safety: memory is released in `lcore_stub` (success) or in the `Err` match arm (failure)
         let ctxt = Box::into_raw(Box::new(ExecutionContext { entrypoint, arg })) as *mut c_void;
-        match unsafe { ffi::rte_eal_remote_launch(Some(lcore_stub::<T>), ctxt, self.get()) }.rte_ok() {
+        match unsafe { ffi::rte_eal_remote_launch(Some(lcore_stub::<T>), ctxt, self.get()) }
+            .rte_ok()
+        {
             Ok(_) => Ok(()),
             Err(err) => {
                 let _ = unsafe { Box::from_raw(ctxt) };
@@ -92,12 +94,11 @@ mod tests {
     use std::{thread, time::Duration};
 
     use rte_test_macros::rte_test;
-    use util_macros::millis;
 
     use super::*;
 
     fn work(sleep_ms: u64) -> i32 {
-        thread::sleep(millis!(sleep_ms));
+        thread::sleep(Duration::from_millis(sleep_ms));
         0
     }
 
