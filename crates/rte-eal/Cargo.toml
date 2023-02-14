@@ -1,0 +1,13 @@
+[package]
+name = "rte-eal"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+libc = "0.2"
+thiserror = "1.0"
+tracing = "0.1"
+
+argv = { path = "../argv" }
+ffi = { package = "rte-sys", path = "../rte-sys" }
+rte-error = { path = "../rte-error" }

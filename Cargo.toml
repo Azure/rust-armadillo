@@ -1,0 +1,10 @@
+[workspace]
+members = [
+    "crates/argv",
+    "crates/mac-addr",
+    "crates/rte",
+    "crates/rte-eal",
+    "crates/rte-error",
+    "crates/rte-sys",
+    "crates/rte-test-macros",
+]
